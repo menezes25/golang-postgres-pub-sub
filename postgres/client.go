@@ -34,13 +34,15 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	_, err = cli.connPool.Exec(ctx, createDatabase)
 	if err != nil {
 		sqlErr := &pgconn.PgError{}
-		if errors.As(err, &sqlErr) {
-			//* se o banco já existe não queremos retornar erro
-			if !isDuplicateDatabaseError(sqlErr) {
-				cli.Close()
-				return nil, err
-			}
+		errors.As(err, &sqlErr)
+		//* se o banco já existe não queremos retornar erro
+		if !isDuplicateDatabaseError(sqlErr) {
+			cli.Close()
+			return nil, err
 		}
+
+		// cli.Close()
+		// return nil, err
 	}
 	cli.Close()
 
@@ -53,7 +55,7 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	if err != nil {
 		return nil, err
 	}
-
+	
 	return cli, nil
 }
 
@@ -125,7 +127,7 @@ func (pc *PostgresClient) ListenToEvents(ctx context.Context) (chan string, erro
 		close(notchan)
 		return notchan, err
 	}
-	
+
 	// this subscribes our connection to the 'event' channel, the channel name can be whatever you want.
 	conn := poolConn.Conn()
 	_, err = conn.Exec(ctx, "listen event")
@@ -137,23 +139,28 @@ func (pc *PostgresClient) ListenToEvents(ctx context.Context) (chan string, erro
 	go func() {
 		defer func() {
 			pc.logger.Debug("stoping event listening")
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			_, err := conn.Exec(ctx, "unlisten event")
 			if err != nil {
 				pc.logger.Error("failed to unlisten event with: ", err.Error())
 			}
-			poolConn.Release()//!IMPORTANTE
+			//! poolConn.Release() porque se não a conexão com o banco nunca será fechada
+			poolConn.Release() //!IMPORTANTE
 			close(notchan)
+			cancel()
 		}()
-		
-		// if ctx is done, err will be non-nil and this func will return
-		msg, err := conn.WaitForNotification(ctx)
-		if err != nil {
-			pc.logger.Error("WaitForNotification error: ", err.Error())
-			return
-		}
 
-		pc.logger.Infow("Got a message from postgres!!!", "payload", msg.Payload)
-		notchan <- msg.Payload
+		for {
+			//* if ctx is done, err will be non-nil and this func will return
+			msg, err := conn.WaitForNotification(ctx)
+			if err != nil {
+				pc.logger.Error("WaitForNotification error: ", err.Error())
+				return
+			}
+
+			pc.logger.Infow("new notification from postrges", "channel", msg.Channel, "payload", msg.Payload)
+			notchan <- msg.Payload
+		}
 	}()
 
 	return notchan, nil

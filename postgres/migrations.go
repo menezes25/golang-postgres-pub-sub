@@ -50,7 +50,7 @@ CREATE DATABASE event_test
 `
 
 const createDatabase = `
-CREATE DATABASE event_test
+CREATE DATABASE event
     WITH 
     OWNER = tester
     ENCODING = 'UTF8'
