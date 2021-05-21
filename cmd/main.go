@@ -3,10 +3,15 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	gopostgrespubsub "postgres_pub_sub"
 	"postgres_pub_sub/postgres"
+	"postgres_pub_sub/trasnport/rest"
+	"postgres_pub_sub/trasnport/websocket"
 	"syscall"
 	"time"
 
@@ -20,17 +25,6 @@ const (
 	db_port = "5432"
 	db_pass = "tester"
 )
-
-type Payload struct {
-	ID        int    `json:"id,omitempty"`
-	Name      string `json:"name,omitempty"`
-	CreatedAt string `json:"created_at,omitempty"`
-}
-
-type notification struct {
-	Op      string  `json:"op,omitempty"`
-	Payload Payload `json:"payload,omitempty"`
-}
 
 func main() {
 	// https://github.com/uber-go/zap/issues/584
@@ -61,25 +55,38 @@ func run(l *zap.SugaredLogger) error {
 		return err
 	}
 
-	go func() {
-		for newNotification := range notificationChan {
-			l.Infow("new notification", "payload", newNotification)
-		}
-		l.Info("stoped listening to notification channel")
-	}()
+	responseChan := gopostgrespubsub.HandleEventEvents(notificationChan, l)
+
+	wsManager := websocket.New(responseChan)
+
+	mux := http.NewServeMux()
+
+	mux.Handle("/api/event", rest.MakePostEventHandler(postgresCli))
+	mux.Handle("/ws/echo", wsManager.MakeListenToEventsHandler())
+
+	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), mux)
+
+	errchan := make(chan error)
+	go rest.StartServer(srv, l.With("vision_server", "rest"), errchan)
+	l.Info("running rest server")
 
 	doneChan := make(chan os.Signal, 1)
 	signal.Notify(doneChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	oscall := <-doneChan
-	l.Infow("shuting servers down with", "sys_signal", oscall.String())
+	select {
+	case oscall := <-doneChan:
+		l.Infow("shuting servers down with", "sys_signal", oscall.String())
+		rest.ShutdownServer(ctx, srv, l.With("server", "rest"))
+	case err := <-errchan:
+		l.Info("rest server crashed with ", err.Error())
+	}
 
 	//* finaliza execução das subrotinas
 	cancel()
 
 	//* espera finalização das subrotinas
 	select {
-	case <-time.After(20*time.Second):
+	case <-time.After(20 * time.Second):
 		return errors.New("shutdown timedout")
 	case <-notificationChan:
 		return nil

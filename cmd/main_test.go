@@ -7,6 +7,17 @@ import (
 	"testing"
 )
 
+type Payload struct {
+	ID        int    `json:"id,omitempty"`
+	Name      string `json:"name,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
+}
+
+type notification struct {
+	Op      string  `json:"op,omitempty"`
+	Payload Payload `json:"payload,omitempty"`
+}
+
 func Test_run(t *testing.T) {
 	type args struct {
 		wantEvent notification
@@ -56,8 +67,8 @@ func Test_run(t *testing.T) {
 				wantEvent: notification{
 					Op: "DELETE",
 					Payload: Payload{
-						ID:        1,
-						Name:      "event_1_edited",
+						ID:   1,
+						Name: "event_1_edited",
 					},
 				},
 				operation: "delete",
@@ -89,8 +100,8 @@ func Test_run(t *testing.T) {
 				}
 			}
 			not := <-notchan
-			
-			var event notification 
+
+			var event notification
 			err = json.Unmarshal([]byte(not), &event)
 			if err != nil {
 				t.Error(err.Error())

@@ -9,13 +9,6 @@ const (
 	eventTable = "event"
 )
 
-type Event struct {
-	ID        int       `json:"id,omitempty"`
-	Name      string    `json:"name,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-}
-
 func (pc *PostgresClient) AddEvent(ctx context.Context, name string) error {
 	qry, _, err := pc.psql.Insert(eventTable).Columns("name", "created_at").Values(1, 2).ToSql()
 	if err != nil {
