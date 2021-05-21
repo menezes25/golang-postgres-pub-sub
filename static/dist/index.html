@@ -1,12 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Postgres Pub Sub</title>
+  <!-- https://github.com/menezes25/golang-postgres-pub-sub -->
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POC - Postgres PUB/SUB</title>
+  <link rel="shortcut icon" href="favicon.ico" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    HUEEEEEEEEE
+  <div class="container">
+    <h1 class="title main-title">POC - Postgres PUB/SUB</h1>
+
+    <div class="grid">
+      <div class="create-event">
+        <h2 class="title">Criar evento</h2>
+        <div>
+          <input id="input-event-name" class="input-text" type="text" placeholder="Nome do evento...">
+          <button id="btn-create" class="btn">Criar</button>
+        </div>
+      </div>
+
+      <div class="card card-in-progress">
+        <h2 class="title">Eventos em andamento</h2>
+        <ul>
+          <li>demo a</li>
+          <li>demo b</li>
+        </ul>
+      </div>
+
+      <div class="card card-done">
+        <h2 class="title">Eventos concluídos</h2>
+        <ul>
+          <li>demo a</li>
+          <li>demo b</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
 </body>
 </html>
