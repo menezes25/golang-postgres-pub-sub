@@ -12,6 +12,7 @@ import (
 	"postgres_pub_sub/postgres"
 	"postgres_pub_sub/trasnport/rest"
 	"postgres_pub_sub/trasnport/websocket"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -36,13 +37,17 @@ func main() {
 	}
 	logger := zapLogger.Sugar()
 
-	if err := run(logger); err != nil {
+	err = run(logger)
+	if err != nil {
 		logger.Fatal(err.Error())
 	}
+
+	fmt.Printf("Number of hanging goroutines: %d", runtime.NumGoroutine()-1)
 }
 
 func run(l *zap.SugaredLogger) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	// ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	postgresCli, err := postgres.NewProduction(db_host, db_name, db_user, db_port, db_pass, l)
@@ -66,16 +71,13 @@ func run(l *zap.SugaredLogger) error {
 
 	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), mux)
 
-	errchan := make(chan error)
+	errchan := make(chan error, 1)
 	go rest.StartServer(srv, l.With("vision_server", "rest"), errchan)
 	l.Info("running rest server")
 
-	doneChan := make(chan os.Signal, 1)
-	signal.Notify(doneChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
 	select {
-	case oscall := <-doneChan:
-		l.Infow("shuting servers down with", "sys_signal", oscall.String())
+	case <-ctx.Done():
+		l.Infow("shuting servers down with", "error", ctx.Err().Error())
 		rest.ShutdownServer(ctx, srv, l.With("server", "rest"))
 	case err := <-errchan:
 		l.Info("rest server crashed with ", err.Error())
