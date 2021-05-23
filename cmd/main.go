@@ -12,6 +12,7 @@ import (
 	"postgres_pub_sub/postgres"
 	"postgres_pub_sub/trasnport/rest"
 	"postgres_pub_sub/trasnport/websocket"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -39,6 +40,7 @@ func main() {
 	if err := run(logger); err != nil {
 		logger.Fatal(err.Error())
 	}
+	logger.Info("num of go routines hangin ", runtime.NumGoroutine())
 }
 
 func run(l *zap.SugaredLogger) error {
