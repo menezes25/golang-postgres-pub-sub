@@ -55,13 +55,18 @@ func run(l *zap.SugaredLogger) error {
 		return err
 	}
 
-	notificationChan, err := postgresCli.ListenToEvents(ctx, "event")
+	//* jeito novo de fazer
+	err = postgresCli.StartListeningToNotifications(ctx, []string{"event", "documents"})
 	if err != nil {
 		return err
 	}
 
-	responseChan := gopostgrespubsub.HandleEventEvents(notificationChan, l)
-
+	//* jeito antigo de fazer
+	eventChannelChan, err := postgresCli.ListenToEvents(ctx, "event")
+	if err != nil {
+		return err
+	}
+	responseChan := gopostgrespubsub.HandleEventEvents(eventChannelChan, l)
 	wsManager := websocket.New(responseChan)
 
 	mux := http.NewServeMux()
@@ -90,7 +95,7 @@ func run(l *zap.SugaredLogger) error {
 	select {
 	case <-time.After(20 * time.Second):
 		return errors.New("shutdown timedout")
-	case <-notificationChan:
+	case <-eventChannelChan:
 		return nil
 	}
 }
