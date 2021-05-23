@@ -33,7 +33,7 @@ function handleWsError(errorEvent) {
 }
 
 function createNewSocket() {
-  const socket = new WebSocket(BASE_URL);
+  const socket = new WebSocket(BASE_URL+"/event");
   socket.onopen = handleWsOpen;
   socket.onmessage = handleWsMessage;
   socket.onclose = handleWsClose;

@@ -8,77 +8,95 @@ import (
 	"go.uber.org/zap"
 )
 
+//* Descreve as operações
 const (
-	EVENT_INSERT_OP = "INSERT"
-	EVENT_UPDATE_OP = "UPDATE"
-	EVENT_DELETE_OP = "DELETE"
+	PG_INSERT_OP = "INSERT"
+	PG_UPDATE_OP = "UPDATE"
+	PG_DELETE_OP = "DELETE"
 )
 
-type notification struct {
-	Op    string `json:"op,omitempty"`
-	Event Event  `json:"payload,omitempty"`
+// type Eventer interface {
+// 	Listen(EventType)
+// 	Unlisten(EventType)
+// }
+
+type PgEvent struct {
+	Op      string       `json:"op,omitempty"`
+	Payload EventPayload `json:"payload,omitempty"`
 }
 
-type Event struct {
+type EventPayload struct {
 	ID        int       `json:"id,omitempty"`
 	Name      string    `json:"name,omitempty"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
-func HandleEventEvents(notchan chan string, l *zap.SugaredLogger) chan string {
-	ch := make(chan string, 1)
+func HandleEventEvents(notchan chan Notification, l *zap.SugaredLogger) chan Event {
+	ch := make(chan Event, 1)
 
 	go func() {
-		for newNotification := range notchan {
-			l.Infow("new notification", "payload", newNotification)
-			var not notification
-			err := json.Unmarshal([]byte(newNotification), &not)
-			if err != nil {
-				l.Errorw("failed to unmarshal notification", "error", err.Error())
-			}
-			switch not.Op {
-			case EVENT_INSERT_OP:
-				r, err := not.Event.handleInsertEvent()
-				if err != nil {
-					r = "error" + err.Error()
-				}
-				ch <- r
-			case EVENT_UPDATE_OP:
-				r, err := not.Event.handleUpdateEvent()
-				if err != nil {
-					r = "error" + err.Error()
-				}
-				ch <- r
-			case EVENT_DELETE_OP:
-				r, err := not.Event.handleDeleteEvent()
-				if err != nil {
-					r = "error" + err.Error()
-				}
-				ch <- r
+		for notification := range notchan {
+			l.Infow("new notification", "payload", notification)
+			switch notification.Channel {
+			//TODO: parametrizar canais
+			case "event":
+				handleEventNotification(notification, ch)
+			default:
+				l.Debugw("got notification with unregistered channel", "notification", notification)
 			}
 		}
-		l.Info("stoped listening to notification channel")
+		l.Info("stoped listening to Notification channel")
 		close(ch)
 	}()
 
 	return ch
 }
 
-func (e Event) handleInsertEvent() (string, error) {
+func handleEventNotification(notification Notification, responseChan chan Event) {
+	var event PgEvent
+	err := json.Unmarshal([]byte(notification.Payload), &event)
+	if err != nil {
+		responseChan <- Event{Payload: err.Error()}
+	}
+	switch event.Op {
+	case PG_INSERT_OP:
+		r, err := event.Payload.handleInsertEvent()
+		if err != nil {
+			r = "error" + err.Error()
+		}
+		responseChan <- Event{Payload: r}
+	case PG_UPDATE_OP:
+		r, err := event.Payload.handleUpdateEvent()
+		if err != nil {
+			r = "error" + err.Error()
+		}
+		responseChan <- Event{Payload: r}
+	case PG_DELETE_OP:
+		r, err := event.Payload.handleDeleteEvent()
+		if err != nil {
+			r = "error" + err.Error()
+		}
+		responseChan <- Event{Payload: r}
+	default:
+		responseChan <- Event{Payload: "operation unkown"}
+	}
+}
+
+func (e EventPayload) handleInsertEvent() (string, error) {
 	println("processing insert event ", e.Name)
 	<-time.After(500 * time.Millisecond)
 	return fmt.Sprint("event ", e.Name, " insert processed"), nil
 }
 
-func (e Event) handleUpdateEvent() (string, error) {
+func (e EventPayload) handleUpdateEvent() (string, error) {
 	println("processing update event ", e.Name)
 	<-time.After(500 * time.Millisecond)
 	println("event", e.Name, "update processed")
 	return "", nil
 }
 
-func (e Event) handleDeleteEvent() (string, error) {
+func (e EventPayload) handleDeleteEvent() (string, error) {
 	println("processing delete event ", e.Name)
 	<-time.After(500 * time.Millisecond)
 	println("event", e.Name, "delete processed")

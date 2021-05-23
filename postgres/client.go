@@ -118,54 +118,6 @@ func (pc *PostgresClient) migrateTables(ctx context.Context) error {
 	return nil
 }
 
-func (pc *PostgresClient) ListenToEvents(ctx context.Context) (chan string, error) {
-	notchan := make(chan string, 1)
-
-	poolConn, err := pc.connPool.Acquire(ctx)
-	if err != nil {
-		pc.logger.Error("Acquire connection error: ", err.Error())
-		close(notchan)
-		return notchan, err
-	}
-
-	// this subscribes our connection to the 'event' channel, the channel name can be whatever you want.
-	conn := poolConn.Conn()
-	_, err = conn.Exec(ctx, "listen event")
-	if err != nil {
-		close(notchan)
-		return notchan, err
-	}
-
-	go func() {
-		defer func() {
-			pc.logger.Debug("stoping event listening")
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			_, err := conn.Exec(ctx, "unlisten event")
-			if err != nil {
-				pc.logger.Error("failed to unlisten event with: ", err.Error())
-			}
-			//! poolConn.Release() porque se não a conexão com o banco nunca será fechada
-			poolConn.Release() //!IMPORTANTE
-			close(notchan)
-			cancel()
-		}()
-
-		for {
-			//* if ctx is done, err will be non-nil and this func will return
-			msg, err := conn.WaitForNotification(ctx)
-			if err != nil {
-				pc.logger.Error("WaitForNotification error: ", err.Error())
-				return
-			}
-
-			pc.logger.Infow("new notification from postrges", "channel", msg.Channel, "payload", msg.Payload)
-			notchan <- msg.Payload
-		}
-	}()
-
-	return notchan, nil
-}
-
 func isDuplicateTableError(sqlErr *pgconn.PgError) bool {
 	// erro de tabela já criada no banco de dados
 	return sqlErr.Code == "42P07"

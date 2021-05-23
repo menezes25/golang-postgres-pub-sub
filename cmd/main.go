@@ -50,7 +50,7 @@ func run(l *zap.SugaredLogger) error {
 		return err
 	}
 
-	notificationChan, err := postgresCli.ListenToEvents(ctx)
+	notificationChan, err := postgresCli.ListenToEvents(ctx, "event")
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func run(l *zap.SugaredLogger) error {
 	mux := http.NewServeMux()
 
 	mux.Handle("/api/event", rest.MakePostEventHandler(postgresCli))
-	mux.Handle("/ws/echo", wsManager.MakeListenToEventsHandler())
+	mux.Handle("/ws/echo/event", wsManager.MakeListenToEventsHandler())
 
 	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), mux)
 

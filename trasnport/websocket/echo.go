@@ -1,37 +1,37 @@
 package websocket
 
 import (
+	"fmt"
 	"net"
 	"net/http"
+	gopostgrespubsub "postgres_pub_sub"
+	"strings"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 )
 
-//TODO: EventTypes documents, users
-
-type EventType string
-
-type WsManager struct {
-	Conns []net.Conn
-	MapConnEventTypes map[EventType][]net.Conn
+type Event struct {
+	Type    gopostgrespubsub.EventType
+	Payload interface{}
 }
 
-func New(writeToConnectionsChan chan string) *WsManager {
+type WsManager struct {
+	EventTypeConns map[gopostgrespubsub.EventType][]net.Conn
+}
+
+func New(eventChan chan gopostgrespubsub.Event) *WsManager {
 	w := &WsManager{
-		Conns: make([]net.Conn, 0),
+		EventTypeConns: make(map[gopostgrespubsub.EventType][]net.Conn),
 	}
 
 	go func() {
-		for write := range writeToConnectionsChan {
-			println("got message to send to client: ", write)
-			//TODO: EventType from write 
-			//TODO: w.MapConnEventTypes[eventType] on range
-			// var eventType EventType = "EventType"
-			
-			for i, c := range w.Conns {
+		for event := range eventChan {
+			fmt.Printf("got message to send to client: %v\n", event)
+
+			for i, c := range w.EventTypeConns[event.Type] {
 				println("sending to conn: ", i)
-				err := wsutil.WriteServerMessage(c, ws.OpText, []byte(write))
+				err := wsutil.WriteServerMessage(c, ws.OpText, []byte(event.Payload))
 				if err != nil {
 					return
 				}
@@ -43,17 +43,22 @@ func New(writeToConnectionsChan chan string) *WsManager {
 }
 
 func (wm *WsManager) MakeListenToEventsHandler() http.HandlerFunc {
-	//TODO: requisitar tipo de evento no request
-	type Request struct {
-		EventsToListen []string
-	}
 	return func(w http.ResponseWriter, r *http.Request) {
+		paths := strings.Split(r.RequestURI, "/")
+		event := paths[len(paths)-1]
+
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
+			return
 		}
-		wm.Conns = append(wm.Conns, conn)
+
+		if _, ok := wm.EventTypeConns[gopostgrespubsub.EventType(event)]; ok {
+			wm.EventTypeConns[gopostgrespubsub.EventType(event)] = append(wm.EventTypeConns[gopostgrespubsub.EventType(event)], conn)
+		} else {
+			wm.EventTypeConns[gopostgrespubsub.EventType(event)] = []net.Conn{conn}
+		}
 
 		go func() {
 			defer conn.Close()

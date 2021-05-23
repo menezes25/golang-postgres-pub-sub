@@ -78,7 +78,7 @@ func Test_run(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			notchan, err := postgresClient.ListenToEvents(context.TODO())
+			notchan, err := postgresClient.ListenToEvents(context.TODO(), "event")
 			if err != nil {
 				t.Fatal("failed to listen to events with: ", err.Error())
 			}
@@ -102,7 +102,7 @@ func Test_run(t *testing.T) {
 			not := <-notchan
 
 			var event notification
-			err = json.Unmarshal([]byte(not), &event)
+			err = json.Unmarshal([]byte(not.Payload), &event)
 			if err != nil {
 				t.Error(err.Error())
 			}
