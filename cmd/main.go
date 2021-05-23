@@ -72,7 +72,7 @@ func run(l *zap.SugaredLogger) error {
 			case data := <- eventChan:
 				l.Infow("new postgres event", "topic", data.Topic, "data", data.Data)
 			case <-ctx.Done():
-				l.Debug("stpo listening to EventBus eventChan with: ", ctx.Err())
+				l.Debug("stop listening to EventBus eventChan with: ", ctx.Err())
 				return
 			}
 		}
