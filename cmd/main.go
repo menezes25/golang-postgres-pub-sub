@@ -66,22 +66,13 @@ func run(l *zap.SugaredLogger) error {
 	dataEventChan := make(chan gopostgrespubsub.DataEvent, 1)
 	postgresEventBus.Subscribe("event", dataEventChan)
 
-	newResponseChan := gopostgrespubsub.HandleEventData(dataEventChan, l)
+	newResponseChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
 
 	newWsManager := websocket.New(newResponseChan)
-
-	//* jeito antigo de fazer
-	// eventChannelChan, err := postgresCli.ListenToEvents(ctx, "event")
-	// if err != nil {
-	// 	return err
-	// }
-	// responseChan := gopostgrespubsub.HandleEventEvents(eventChannelChan, l)
-	// wsManager := websocket.New(responseChan)
 
 	mux := http.NewServeMux()
 
 	mux.Handle("/api/event", rest.MakePostEventHandler(postgresCli))
-	// mux.Handle("/ws/echo/event", wsManager.MakeListenToEventsHandler())
 	mux.Handle("/ws/new/event", newWsManager.MakeListenToEventsHandler())
 
 	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), mux)

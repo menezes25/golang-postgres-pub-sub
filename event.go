@@ -1,6 +1,7 @@
 package gopostgrespubsub
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -27,18 +28,25 @@ type EventPayload struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
-func HandleEventData(eventDataChan chan DataEvent, l *zap.SugaredLogger) <-chan Event {
+func HandleEventData(ctx context.Context, eventDataChan chan DataEvent, l *zap.SugaredLogger) <-chan Event {
 	ch := make(chan Event, 1)
 
 	go func() {
-		for data := range eventDataChan {
-			l.Infow("new data event", "topic", data.Topic, "payload", data.Data)
-			switch data.Topic {
-				//TODO: parametrizar canais acho que esses canais vão ficar dentro do EventBus
-			case "event":
-				handlePostgresDataEvent(data, ch)
-			default:
-				l.Warnw("got postgres event with unregistered channel", "event", data.Data)
+		for {
+			select {
+			case data := <- eventDataChan:
+				l.Infow("new data event", "topic", data.Topic, "payload", data.Data)
+				switch data.Topic {
+					//TODO: parametrizar canais acho que esses canais vão ficar dentro do EventBus
+				case "event":
+					handlePostgresDataEvent(data, ch)
+				default:
+					l.Warnw("got postgres event with unregistered channel", "event", data.Data)
+				}
+			case <-ctx.Done():
+				l.Info("stop handling eventDataChan")
+				close(ch)
+				return
 			}
 		}
 	}()
