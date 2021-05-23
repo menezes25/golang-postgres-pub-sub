@@ -6,7 +6,7 @@
  * close – connection closed
 */
 
-const BASE_URL = "ws://localhost:8880/ws/echo";
+const BASE_URL = "ws://localhost:8880/ws/new";
 
 function handleWsOpen(openEvent) {
   console.debug('WebsocketOpen', openEvent);

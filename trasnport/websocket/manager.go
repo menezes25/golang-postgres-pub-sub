@@ -20,7 +20,7 @@ type WsManager struct {
 	EventTypeConns map[gopostgrespubsub.EventType][]net.Conn
 }
 
-func New(eventChan chan gopostgrespubsub.Event) *WsManager {
+func New(eventChan <-chan gopostgrespubsub.Event) *WsManager {
 	w := &WsManager{
 		EventTypeConns: make(map[gopostgrespubsub.EventType][]net.Conn),
 	}

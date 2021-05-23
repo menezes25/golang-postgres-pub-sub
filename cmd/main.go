@@ -63,33 +63,26 @@ func run(l *zap.SugaredLogger) error {
 		return err
 	}
 
-	eventChan := make(chan gopostgrespubsub.DataEvent, 1)
-	postgresEventBus.Subscribe("event", eventChan)
+	dataEventChan := make(chan gopostgrespubsub.DataEvent, 1)
+	postgresEventBus.Subscribe("event", dataEventChan)
 
-	go func() {
-		for {
-			select {
-			case data := <- eventChan:
-				l.Infow("new postgres event", "topic", data.Topic, "data", data.Data)
-			case <-ctx.Done():
-				l.Debug("stop listening to EventBus eventChan with: ", ctx.Err())
-				return
-			}
-		}
-	}()
+	newResponseChan := gopostgrespubsub.HandleEventData(dataEventChan, l)
+
+	newWsManager := websocket.New(newResponseChan)
 
 	//* jeito antigo de fazer
-	eventChannelChan, err := postgresCli.ListenToEvents(ctx, "event")
-	if err != nil {
-		return err
-	}
-	responseChan := gopostgrespubsub.HandleEventEvents(eventChannelChan, l)
-	wsManager := websocket.New(responseChan)
+	// eventChannelChan, err := postgresCli.ListenToEvents(ctx, "event")
+	// if err != nil {
+	// 	return err
+	// }
+	// responseChan := gopostgrespubsub.HandleEventEvents(eventChannelChan, l)
+	// wsManager := websocket.New(responseChan)
 
 	mux := http.NewServeMux()
 
 	mux.Handle("/api/event", rest.MakePostEventHandler(postgresCli))
-	mux.Handle("/ws/echo/event", wsManager.MakeListenToEventsHandler())
+	// mux.Handle("/ws/echo/event", wsManager.MakeListenToEventsHandler())
+	mux.Handle("/ws/new/event", newWsManager.MakeListenToEventsHandler())
 
 	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), mux)
 
@@ -112,7 +105,7 @@ func run(l *zap.SugaredLogger) error {
 	select {
 	case <-time.After(20 * time.Second):
 		return errors.New("shutdown timedout")
-	case <-eventChannelChan:
+	case <-newResponseChan:
 		return nil
 	}
 }
