@@ -19,11 +19,11 @@ type PostgresClient struct {
 
 	dns            string
 	connPool       *pgxpool.Pool
-	activeChannels []string// armazena canais de listen/notify do postgres
+	activeChannels []string // armazena canais de listen/notify do postgres
 
 	psql squirrel.StatementBuilderType
 
-	eventBus gopostgrespubsub.EventBus
+	eventBus *gopostgrespubsub.EventBus
 }
 
 // NewProduction se conecta ao banco de dados tenta criar o banco e suas tabelas e retorna um cliente
@@ -108,6 +108,10 @@ func newPostgresClient(host, dbname, user, port, password string, logger *zap.Su
 
 func (pc *PostgresClient) Close() {
 	pc.connPool.Close()
+}
+
+func (pc *PostgresClient) WithEventBus(eventBus *gopostgrespubsub.EventBus) {
+	pc.eventBus = eventBus
 }
 
 func (pc *PostgresClient) migrateTables(ctx context.Context) error {

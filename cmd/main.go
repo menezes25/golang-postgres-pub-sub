@@ -54,12 +54,29 @@ func run(l *zap.SugaredLogger) error {
 	if err != nil {
 		return err
 	}
+	postgresEventBus := gopostgrespubsub.NewEventBus()
+	postgresCli.WithEventBus(postgresEventBus)
 
 	//* jeito novo de fazer
 	err = postgresCli.StartListeningToNotifications(ctx, []string{"event", "documents"})
 	if err != nil {
 		return err
 	}
+
+	eventChan := make(chan gopostgrespubsub.DataEvent, 1)
+	postgresEventBus.Subscribe("event", eventChan)
+
+	go func() {
+		for {
+			select {
+			case data := <- eventChan:
+				l.Infow("new postgres event", "topic", data.Topic, "data", data.Data)
+			case <-ctx.Done():
+				l.Debug("stpo listening to EventBus eventChan with: ", ctx.Err())
+				return
+			}
+		}
+	}()
 
 	//* jeito antigo de fazer
 	eventChannelChan, err := postgresCli.ListenToEvents(ctx, "event")
