@@ -39,7 +39,7 @@ func (pc *PostgresClient) ListenToEvents(ctx context.Context, name string) (chan
 			//* if ctx is done, err will be non-nil and this func will return
 			msg, err := conn.WaitForNotification(ctx)
 			if err != nil {
-				pc.logger.Error("WaitForNotification error: ", err.Error())
+				pc.logger.Info("stoped listening to postgres notifications with: ", err.Error())
 				return
 			}
 
