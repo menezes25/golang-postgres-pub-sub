@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	gopostgrespubsub "postgres_pub_sub"
 	"time"
 
 	"github.com/Masterminds/squirrel"
@@ -14,10 +15,15 @@ import (
 
 // PostgresClient cliente para manipulações em banco de dados postgres
 type PostgresClient struct {
-	dns      string
-	logger   *zap.SugaredLogger
-	connPool *pgxpool.Pool
-	psql     squirrel.StatementBuilderType
+	log *zap.SugaredLogger
+
+	dns            string
+	connPool       *pgxpool.Pool
+	activeChannels []string// armazena canais de listen/notify do postgres
+
+	psql squirrel.StatementBuilderType
+
+	eventBus gopostgrespubsub.EventBus
 }
 
 // NewProduction se conecta ao banco de dados tenta criar o banco e suas tabelas e retorna um cliente
@@ -27,6 +33,8 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	if err != nil {
 		return nil, err
 	}
+
+	cli.activeChannels = make([]string, 0)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -55,7 +63,7 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return cli, nil
 }
 
@@ -92,7 +100,7 @@ func newPostgresClient(host, dbname, user, port, password string, logger *zap.Su
 
 	return &PostgresClient{
 		dns:      dns,
-		logger:   logger,
+		log:      logger,
 		connPool: dbpool,
 		psql:     squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}, nil
@@ -113,7 +121,7 @@ func (pc *PostgresClient) migrateTables(ctx context.Context) error {
 		return err
 	}
 
-	pc.logger.Info("created all tables with success")
+	pc.log.Info("created all tables with success")
 
 	return nil
 }

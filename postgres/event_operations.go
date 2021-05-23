@@ -20,7 +20,7 @@ func (pc *PostgresClient) AddEvent(ctx context.Context, name string) error {
 		return err
 	}
 
-	pc.logger.Debugw("added event with success", "name", name)
+	pc.log.Debugw("added event with success", "name", name)
 
 	return nil
 }
@@ -36,7 +36,7 @@ func (pc *PostgresClient) UpdateEventByID(ctx context.Context, name string, id i
 		return err
 	}
 
-	pc.logger.Debugw("updated event with success")
+	pc.log.Debugw("updated event with success")
 
 	return nil
 }
@@ -52,7 +52,7 @@ func (pc *PostgresClient) DeleteEventByID(ctx context.Context, id int) error {
 		return err
 	}
 
-	pc.logger.Debugw("updated event with success")
+	pc.log.Debugw("updated event with success")
 
 	return nil
 }
