@@ -18,7 +18,7 @@ function handleWsMessage(messageEvent) {
   console.debug('Dados recebidos do servidor:', messageEvent.data);
 }
 
-function handleWsClose(closeEvent) {
+async function handleWsClose(closeEvent) {
   console.debug('WebsocketClose', closeEvent);
 
   if (closeEvent.wasClean) {
@@ -26,11 +26,16 @@ function handleWsClose(closeEvent) {
   } else {
     console.debug(`Conexão fechada por erro de rede, código: ${closeEvent.code}, motivo: ${closeEvent.reason}`);
   }
+
+  await sleep(10000)
+  createNewSocket()
 }
 
 function handleWsError(errorEvent) {
   console.debug('WebsocketError', errorEvent);
 }
+
+const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 function createNewSocket() {
   const socket = new WebSocket(BASE_URL+"/event");
