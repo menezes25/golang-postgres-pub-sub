@@ -78,7 +78,7 @@ func run(l *zap.SugaredLogger) error {
 	select {
 	case <-ctx.Done():
 		l.Infow("shuting servers down with", "error", ctx.Err().Error())
-		rest.ShutdownServer(ctx, srv, l.With("server", "rest"))
+		rest.ShutdownServer(context.Background(), srv, l.With("server", "rest"))
 	case err := <-errchan:
 		l.Info("rest server crashed with ", err.Error())
 	}
