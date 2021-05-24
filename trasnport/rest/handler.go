@@ -14,17 +14,6 @@ func MakePostEventHandler(postgresCli *postgres.PostgresClient) httprouter.Handl
 	}
 
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
-			// Set CORS headers
-			header := w.Header()
-			header.Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, DELETE, PUT")
-			header.Set("Access-Control-Allow-Origin", "*")
-			header.Set("Access-Control-Allow-Credentials", "true")
-			header.Set("Access-Control-Allow-Headers", "*")
-
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
 		var event EventRequest
 		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
