@@ -4,26 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"go.uber.org/zap"
 )
-
-//* Descreve as operações
-const (
-	PG_INSERT_OP = "INSERT"
-	PG_UPDATE_OP = "UPDATE"
-	PG_DELETE_OP = "DELETE"
-)
-
-// type Eventer interface {
-// 	Listen(EventType)
-// 	Unlisten(EventType)
-// }
-
-type PgEvent struct {
-	Op      string       `json:"op,omitempty"`
-	Payload EventPayload `json:"payload,omitempty"`
-}
 
 type EventPayload struct {
 	ID        int       `json:"id,omitempty"`
@@ -32,52 +13,32 @@ type EventPayload struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
-func HandleEventEvents(notchan chan Notification, l *zap.SugaredLogger) chan Event {
-	ch := make(chan Event, 1)
-
-	go func() {
-		for notification := range notchan {
-			l.Infow("new notification", "payload", notification)
-			switch notification.Channel {
-			//TODO: parametrizar canais
-			case "event":
-				handleEventNotification(notification, ch)
-			default:
-				l.Debugw("got notification with unregistered channel", "notification", notification)
-			}
-		}
-		l.Info("stoped listening to Notification channel")
-		close(ch)
-	}()
-
-	return ch
-}
-
-func handleEventNotification(notification Notification, responseChan chan Event) {
+func handlePostgresDataEvent(eventData DataEvent, responseChan chan Event) {
 	var event PgEvent
-	err := json.Unmarshal([]byte(notification.Payload), &event)
+	payload := eventData.Data.(string)
+	err := json.Unmarshal([]byte(payload), &event)
 	if err != nil {
-		responseChan <- Event{Payload: err.Error()}
+		responseChan <- Event{Payload: err.Error(), Type: EventType(eventData.Topic)}
 	}
 	switch event.Op {
 	case PG_INSERT_OP:
-		r, err := event.Payload.handleInsertEvent()
+		r, err := event.Payload.(EventPayload).handleInsertEvent()
 		if err != nil {
 			r = "error" + err.Error()
 		}
-		responseChan <- Event{Payload: r}
+		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_UPDATE_OP:
-		r, err := event.Payload.handleUpdateEvent()
+		r, err := event.Payload.(EventPayload).handleUpdateEvent()
 		if err != nil {
 			r = "error" + err.Error()
 		}
-		responseChan <- Event{Payload: r}
+		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_DELETE_OP:
-		r, err := event.Payload.handleDeleteEvent()
+		r, err := event.Payload.(EventPayload).handleDeleteEvent()
 		if err != nil {
 			r = "error" + err.Error()
 		}
-		responseChan <- Event{Payload: r}
+		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	default:
 		responseChan <- Event{Payload: "operation unkown"}
 	}

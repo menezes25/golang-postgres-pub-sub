@@ -1,4 +1,4 @@
 .vscode
 .firebaserc
 *.out
-static/node_modules
+node_modules

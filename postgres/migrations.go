@@ -23,12 +23,13 @@ func (pc *PostgresClient) createTable(ctx context.Context, qry string) error {
 		return err
 	}
 
-	pc.logger.Debug("created table with success")
+	pc.log.Debug("created table with success")
 
 	return nil
 }
 
 func (pc *PostgresClient) createTriggerAndTriggerFuncs(ctx context.Context) error {
+	//TODO: parametriar nome dos canais
 	_, err := pc.connPool.Exec(ctx, createTriggerAndTriggerFuncsQry)
 	if err != nil {
 		return err

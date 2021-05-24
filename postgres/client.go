@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	gopostgrespubsub "postgres_pub_sub"
 	"time"
 
 	"github.com/Masterminds/squirrel"
@@ -14,10 +15,15 @@ import (
 
 // PostgresClient cliente para manipulações em banco de dados postgres
 type PostgresClient struct {
-	dns      string
-	logger   *zap.SugaredLogger
-	connPool *pgxpool.Pool
-	psql     squirrel.StatementBuilderType
+	log *zap.SugaredLogger
+
+	dns            string
+	connPool       *pgxpool.Pool
+	activeChannels []string // armazena canais de listen/notify do postgres
+
+	psql squirrel.StatementBuilderType
+
+	eventBus *gopostgrespubsub.EventBus
 }
 
 // NewProduction se conecta ao banco de dados tenta criar o banco e suas tabelas e retorna um cliente
@@ -27,6 +33,8 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	if err != nil {
 		return nil, err
 	}
+
+	cli.activeChannels = make([]string, 0)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -55,13 +63,13 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return cli, nil
 }
 
 // newPostgresClient cria um cliente capaz de se comunicar com o banco de dados
 func newPostgresClient(host, dbname, user, port, password string, logger *zap.SugaredLogger) (*PostgresClient, error) {
-	dns := fmt.Sprintf("host=%s dbname=%s user=%s port=%s password=%s sslmode=disable",
+	dns := fmt.Sprintf("host=%s dbname=%s user=%s port=%s password=%s sslmode=disable application_name=pub-sub-go",
 		host,
 		dbname,
 		user,
@@ -92,7 +100,7 @@ func newPostgresClient(host, dbname, user, port, password string, logger *zap.Su
 
 	return &PostgresClient{
 		dns:      dns,
-		logger:   logger,
+		log:      logger,
 		connPool: dbpool,
 		psql:     squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}, nil
@@ -100,6 +108,10 @@ func newPostgresClient(host, dbname, user, port, password string, logger *zap.Su
 
 func (pc *PostgresClient) Close() {
 	pc.connPool.Close()
+}
+
+func (pc *PostgresClient) WithEventBus(eventBus *gopostgrespubsub.EventBus) {
+	pc.eventBus = eventBus
 }
 
 func (pc *PostgresClient) migrateTables(ctx context.Context) error {
@@ -113,7 +125,7 @@ func (pc *PostgresClient) migrateTables(ctx context.Context) error {
 		return err
 	}
 
-	pc.logger.Info("created all tables with success")
+	pc.log.Info("created all tables with success")
 
 	return nil
 }
