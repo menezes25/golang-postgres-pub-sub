@@ -2,3 +2,4 @@
 .firebaserc
 *.out
 node_modules
+cmd/__debug_bin

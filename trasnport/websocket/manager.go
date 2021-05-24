@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/julienschmidt/httprouter"
 )
 
 type Event struct {
@@ -42,10 +44,18 @@ func New(eventChan <-chan gopostgrespubsub.Event) *WsManager {
 	return w
 }
 
-func (wm *WsManager) MakeListenToEventsHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		paths := strings.Split(r.RequestURI, "/")
-		event := paths[len(paths)-1]
+func (wm *WsManager) MakeListenToEventsHandler() httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		topics, err := validateListen(r.URL.Query().Get("listen"))
+		if err != nil {
+			println(err.Error())
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("PubSubApp-Error", err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		fmt.Println(topics)
 
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
@@ -54,10 +64,12 @@ func (wm *WsManager) MakeListenToEventsHandler() http.HandlerFunc {
 			return
 		}
 
-		if _, ok := wm.EventTypeConns[gopostgrespubsub.EventType(event)]; ok {
-			wm.EventTypeConns[gopostgrespubsub.EventType(event)] = append(wm.EventTypeConns[gopostgrespubsub.EventType(event)], conn)
-		} else {
-			wm.EventTypeConns[gopostgrespubsub.EventType(event)] = []net.Conn{conn}
+		for _, topic := range topics {
+			if conns, found := wm.EventTypeConns[topic]; found {
+				wm.EventTypeConns[topic] = append(conns, conn)
+			} else {
+				wm.EventTypeConns[topic] = []net.Conn{conn}
+			}
 		}
 
 		go func() {
@@ -74,4 +86,18 @@ func (wm *WsManager) MakeListenToEventsHandler() http.HandlerFunc {
 			}
 		}()
 	}
+}
+
+func validateListen(listenStr string) ([]gopostgrespubsub.EventType, error) {
+	if listenStr == "" {
+		return nil, errors.New("a requisição deve informar no minimo um listen")
+	}
+
+	listens := strings.Split(listenStr, ",")
+	evetntTypeList := make([]gopostgrespubsub.EventType, 0)
+	for _, listen := range listens {
+		evetntTypeList = append(evetntTypeList, gopostgrespubsub.EventType(listen))
+	}
+
+	return evetntTypeList, nil
 }

@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +24,7 @@ const (
 	db_host = "localhost"
 	db_name = "event"
 	db_user = "tester"
-	db_port = "5432"
+	db_port = "5432" // docker-compose 15432
 	db_pass = "tester"
 )
 
@@ -67,14 +68,26 @@ func run(l *zap.SugaredLogger) error {
 
 	newResponseChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
 
-	newWsManager := websocket.New(newResponseChan)
+	wsManager := websocket.New(newResponseChan)
 
-	mux := http.NewServeMux()
+	router := httprouter.New()
 
-	mux.Handle("/api/event", rest.MakePostEventHandler(postgresCli))
-	mux.Handle("/ws/new/event", newWsManager.MakeListenToEventsHandler())
+	// FIXME: Aqui não é lugar do CORS
+	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Access-Control-Request-Method") != "" {
+			header := w.Header()
+			// julienschmidt/httprouter calcula somente os metodos permitidos e armazena no header 'Allow'
+			header.Set("Access-Control-Allow-Methods", header.Get("Allow"))
+			header.Set("Access-Control-Allow-Headers", "Content-Type")
+			header.Set("Access-Control-Allow-Origin", "*")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	router.POST("/api/event", rest.MakePostEventHandler(postgresCli))
+	router.GET("/ws/topic", wsManager.MakeListenToEventsHandler())
 
-	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), mux)
+	l.Infof("listening on: 0.0.0.0:%s", os.Getenv("REST_ADDRESS"))
+	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), router)
 
 	errchan := make(chan error, 1)
 	go rest.StartServer(srv, l.With("vision_server", "rest"), errchan)
