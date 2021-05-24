@@ -1,57 +1,16 @@
 package gopostgrespubsub
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"go.uber.org/zap"
 )
-
-//* Descreve as operações
-const (
-	PG_INSERT_OP = "INSERT"
-	PG_UPDATE_OP = "UPDATE"
-	PG_DELETE_OP = "DELETE"
-)
-
-type PgEvent struct {
-	Op      string       `json:"op,omitempty"`
-	Payload EventPayload `json:"payload,omitempty"`
-}
 
 type EventPayload struct {
 	ID        int       `json:"id,omitempty"`
 	Name      string    `json:"name,omitempty"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-}
-
-func HandleEventData(ctx context.Context, eventDataChan chan DataEvent, l *zap.SugaredLogger) <-chan Event {
-	ch := make(chan Event, 1)
-
-	go func() {
-		for {
-			select {
-			case data := <- eventDataChan:
-				l.Infow("new data event", "topic", data.Topic, "payload", data.Data)
-				switch data.Topic {
-					//TODO: parametrizar canais acho que esses canais vão ficar dentro do EventBus
-				case "event":
-					handlePostgresDataEvent(data, ch)
-				default:
-					l.Warnw("got postgres event with unregistered channel", "event", data.Data)
-				}
-			case <-ctx.Done():
-				l.Info("stop handling eventDataChan")
-				close(ch)
-				return
-			}
-		}
-	}()
-
-	return ch
 }
 
 func handlePostgresDataEvent(eventData DataEvent, responseChan chan Event) {
@@ -63,19 +22,19 @@ func handlePostgresDataEvent(eventData DataEvent, responseChan chan Event) {
 	}
 	switch event.Op {
 	case PG_INSERT_OP:
-		r, err := event.Payload.handleInsertEvent()
+		r, err := event.Payload.(EventPayload).handleInsertEvent()
 		if err != nil {
 			r = "error" + err.Error()
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_UPDATE_OP:
-		r, err := event.Payload.handleUpdateEvent()
+		r, err := event.Payload.(EventPayload).handleUpdateEvent()
 		if err != nil {
 			r = "error" + err.Error()
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_DELETE_OP:
-		r, err := event.Payload.handleDeleteEvent()
+		r, err := event.Payload.(EventPayload).handleDeleteEvent()
 		if err != nil {
 			r = "error" + err.Error()
 		}

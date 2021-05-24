@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrEventBusClosed = errors.New("event bus closed")
+	ErrEventBusClosed  = errors.New("event bus closed")
 	ErrChannelNotFound = errors.New("channel not found")
 )
 
@@ -19,10 +19,11 @@ type DataChannel chan DataEvent
 
 type DataChannelSlice []DataChannel
 
-func NewEventBus() *EventBus {
+func NewEventBus(topics []string) *EventBus {
 	return &EventBus{
 		subscribers: make(map[string]DataChannelSlice),
 		closed:      false,
+		Topics:      topics,
 	}
 }
 
@@ -30,6 +31,8 @@ type EventBus struct {
 	subscribers map[string]DataChannelSlice
 	rm          sync.RWMutex
 	closed      bool
+	Topics      []string
+	
 }
 
 func (eb *EventBus) Subscribe(topic string) DataChannel {

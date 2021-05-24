@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func (pc *PostgresClient) StartListeningToNotifications(ctx context.Context, chans []string) error {
+func (pc *PostgresClient) StartListeningToNotifications(ctx context.Context) error {
 	poolConn, err := pc.connPool.Acquire(ctx)
 	if err != nil {
 		pc.log.Error("acquire connection error: ", err.Error())
@@ -14,7 +14,7 @@ func (pc *PostgresClient) StartListeningToNotifications(ctx context.Context, cha
 
 	//* registra a conexão para o channel 'name'
 	conn := poolConn.Conn()
-	for _, ch := range chans {
+	for _, ch := range pc.eventBus.Topics {
 		_, err = conn.Exec(ctx, "listen "+ch)
 		if err != nil {
 			pc.log.Warnw("failed to listen", "error", err.Error(), "channel", ch)

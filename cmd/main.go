@@ -54,10 +54,11 @@ func run(l *zap.SugaredLogger) error {
 	if err != nil {
 		return err
 	}
-	postgresEventBus := gopostgrespubsub.NewEventBus()
+
+	postgresEventBus := gopostgrespubsub.NewEventBus([]string{"event", "documents"})
 	postgresCli.WithEventBus(postgresEventBus)
 
-	err = postgresCli.StartListeningToNotifications(ctx, []string{"event", "documents"})
+	err = postgresCli.StartListeningToNotifications(ctx)
 	if err != nil {
 		return err
 	}

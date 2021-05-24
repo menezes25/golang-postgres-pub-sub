@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var eb = NewEventBus()
+var eb = NewEventBus([]string{"event", "documents"})
 
 func TestEventBus(t *testing.T) {
 	ch1 := eb.Subscribe("t1")
