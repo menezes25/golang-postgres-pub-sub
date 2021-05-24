@@ -57,14 +57,12 @@ func run(l *zap.SugaredLogger) error {
 	postgresEventBus := gopostgrespubsub.NewEventBus()
 	postgresCli.WithEventBus(postgresEventBus)
 
-	//* jeito novo de fazer
 	err = postgresCli.StartListeningToNotifications(ctx, []string{"event", "documents"})
 	if err != nil {
 		return err
 	}
 
-	dataEventChan := make(chan gopostgrespubsub.DataEvent, 1)
-	postgresEventBus.Subscribe("event", dataEventChan)
+	dataEventChan := postgresEventBus.Subscribe("event")
 
 	newResponseChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
 
@@ -85,6 +83,7 @@ func run(l *zap.SugaredLogger) error {
 	case <-ctx.Done():
 		l.Infow("shuting servers down with", "error", ctx.Err().Error())
 		rest.ShutdownServer(context.Background(), srv, l.With("server", "rest"))
+		postgresEventBus.Close()
 	case err := <-errchan:
 		l.Info("rest server crashed with ", err.Error())
 	}

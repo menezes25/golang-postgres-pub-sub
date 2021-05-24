@@ -10,13 +10,9 @@ import (
 var eb = NewEventBus()
 
 func TestEventBus(t *testing.T) {
-	ch1 := make(chan DataEvent, 1)
-	ch2 := make(chan DataEvent, 1)
-	ch3 := make(chan DataEvent, 1)
-
-	eb.Subscribe("t1", ch1)
-	eb.Subscribe("t2", ch2)
-	eb.Subscribe("t3", ch3)
+	ch1 := eb.Subscribe("t1")
+	ch2 := eb.Subscribe("t2")
+	ch3 := eb.Subscribe("t3")
 
 	go publishTo("t1", "huaaaaa 1")
 	go publishTo("t2", "hueeeee 2")

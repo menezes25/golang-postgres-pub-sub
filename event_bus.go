@@ -6,6 +6,7 @@ import (
 )
 
 var (
+	ErrEventBusClosed = errors.New("event bus closed")
 	ErrChannelNotFound = errors.New("channel not found")
 )
 
@@ -21,24 +22,28 @@ type DataChannelSlice []DataChannel
 func NewEventBus() *EventBus {
 	return &EventBus{
 		subscribers: make(map[string]DataChannelSlice),
+		closed:      false,
 	}
 }
 
 type EventBus struct {
 	subscribers map[string]DataChannelSlice
 	rm          sync.RWMutex
+	closed      bool
 }
 
-func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
+func (eb *EventBus) Subscribe(topic string) DataChannel {
 	eb.rm.Lock()
 	defer eb.rm.Unlock()
 
+	ch := make(DataChannel, 1)
 	if chans, found := eb.subscribers[topic]; found {
 		eb.subscribers[topic] = append(chans, ch)
-		return
+		return ch
 	}
 
 	eb.subscribers[topic] = []DataChannel{ch}
+	return ch
 }
 
 func (eb *EventBus) Unsubscribe(topic string) error {
@@ -50,8 +55,12 @@ func (eb *EventBus) Unsubscribe(topic string) error {
 func (eb *EventBus) Publish(topic string, data interface{}) error {
 	eb.rm.RLock()
 	defer eb.rm.RUnlock()
+
+	if eb.closed {
+		return ErrEventBusClosed
+	}
+
 	chans, found := eb.subscribers[topic]
-	
 	if !found {
 		return ErrChannelNotFound
 	}
@@ -65,4 +74,17 @@ func (eb *EventBus) Publish(topic string, data interface{}) error {
 	}(DataEvent{Data: data, Topic: topic}, channels)
 
 	return nil
+}
+
+func (eb *EventBus) Close() {
+	eb.rm.Lock()
+	defer eb.rm.Unlock()
+
+	if !eb.closed {
+		for _, subs := range eb.subscribers {
+			for _, ch := range subs {
+				close(ch)
+			}
+		}
+	}
 }
