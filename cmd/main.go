@@ -74,7 +74,7 @@ func run(l *zap.SugaredLogger) error {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	router.POST("/api/event", rest.MakePostEventHandler(postgresCli))
-	router.GET("/ws/echo", wsManager.MakeListenToEventsHandler())
+	router.GET("/ws/event", wsManager.MakeListenToEventsHandler())
 
 	l.Infof("listening on: 0.0.0.0:%s", os.Getenv("REST_ADDRESS"))
 	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), router)

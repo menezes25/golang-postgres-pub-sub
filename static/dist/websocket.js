@@ -6,7 +6,7 @@
  * close – connection closed
 */
 
-const BASE_URL = "ws://localhost:8880/ws/echo";
+const BASE_URL = "ws://localhost:8880";
 
 function handleWsOpen(openEvent) {
   console.debug('WebsocketOpen', openEvent);
@@ -33,7 +33,7 @@ function handleWsError(errorEvent) {
 }
 
 function createNewSocket() {
-  const socket = new WebSocket(BASE_URL);
+  const socket = new WebSocket(`${BASE_URL}/ws/event?listen=documents,users`);
   socket.onopen = handleWsOpen;
   socket.onmessage = handleWsMessage;
   socket.onclose = handleWsClose;

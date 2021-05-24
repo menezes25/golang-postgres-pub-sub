@@ -1,8 +1,11 @@
 package websocket
 
 import (
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -49,6 +52,17 @@ func (wm *WsManager) MakeListenToEventsHandler() httprouter.Handle {
 		EventsToListen []string
 	}
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		listens, err := validateListen(r.URL.Query().Get("listen"))
+		if err != nil {
+			println(err.Error())
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("PubSubApp-Error", err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		fmt.Println(listens)
+
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -70,4 +84,18 @@ func (wm *WsManager) MakeListenToEventsHandler() httprouter.Handle {
 			}
 		}()
 	}
+}
+
+func validateListen(listenStr string) ([]EventType, error) {
+	if listenStr == "" {
+		return nil, errors.New("A requisição deve informar no minimo um listen.")
+	}
+
+	listens := strings.Split(listenStr, ",")
+	evetntTypeList := make([]EventType, 0)
+	for _, listen := range listens {
+		evetntTypeList = append(evetntTypeList, EventType(listen))
+	}
+
+	return evetntTypeList, nil
 }
