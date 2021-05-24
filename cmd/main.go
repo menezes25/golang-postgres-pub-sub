@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	gopostgrespubsub "postgres_pub_sub"
@@ -15,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 )
 
@@ -59,12 +59,13 @@ func run(l *zap.SugaredLogger) error {
 
 	wsManager := websocket.New(responseChan)
 
-	mux := http.NewServeMux()
+	router := httprouter.New()
 
-	mux.Handle("/api/event", rest.MakePostEventHandler(postgresCli))
-	mux.Handle("/ws/echo", wsManager.MakeListenToEventsHandler())
+	router.POST("/api/event", rest.MakePostEventHandler(postgresCli))
+	router.GET("/ws/echo", wsManager.MakeListenToEventsHandler())
 
-	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), mux)
+	l.Infof("listening on: 0.0.0.0:%s", os.Getenv("REST_ADDRESS"))
+	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), router)
 
 	errchan := make(chan error)
 	go rest.StartServer(srv, l.With("vision_server", "rest"), errchan)

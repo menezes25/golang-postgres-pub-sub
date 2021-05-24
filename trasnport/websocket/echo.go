@@ -6,6 +6,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/julienschmidt/httprouter"
 )
 
 //TODO: EventTypes documents, users
@@ -13,7 +14,7 @@ import (
 type EventType string
 
 type WsManager struct {
-	Conns []net.Conn
+	Conns             []net.Conn
 	MapConnEventTypes map[EventType][]net.Conn
 }
 
@@ -25,10 +26,10 @@ func New(writeToConnectionsChan chan string) *WsManager {
 	go func() {
 		for write := range writeToConnectionsChan {
 			println("got message to send to client: ", write)
-			//TODO: EventType from write 
+			//TODO: EventType from write
 			//TODO: w.MapConnEventTypes[eventType] on range
 			// var eventType EventType = "EventType"
-			
+
 			for i, c := range w.Conns {
 				println("sending to conn: ", i)
 				err := wsutil.WriteServerMessage(c, ws.OpText, []byte(write))
@@ -42,12 +43,12 @@ func New(writeToConnectionsChan chan string) *WsManager {
 	return w
 }
 
-func (wm *WsManager) MakeListenToEventsHandler() http.HandlerFunc {
+func (wm *WsManager) MakeListenToEventsHandler() httprouter.Handle {
 	//TODO: requisitar tipo de evento no request
 	type Request struct {
 		EventsToListen []string
 	}
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

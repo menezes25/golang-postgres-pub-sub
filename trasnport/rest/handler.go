@@ -4,14 +4,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"postgres_pub_sub/postgres"
+
+	"github.com/julienschmidt/httprouter"
 )
 
-func MakePostEventHandler(postgresCli *postgres.PostgresClient) http.HandlerFunc {
+func MakePostEventHandler(postgresCli *postgres.PostgresClient) httprouter.Handle {
 	type EventRequest struct {
 		Event string `json:"event,omitempty"`
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 			// Set CORS headers
 			header := w.Header()
