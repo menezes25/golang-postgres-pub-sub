@@ -55,13 +55,13 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return cli, nil
 }
 
 // newPostgresClient cria um cliente capaz de se comunicar com o banco de dados
 func newPostgresClient(host, dbname, user, port, password string, logger *zap.SugaredLogger) (*PostgresClient, error) {
-	dns := fmt.Sprintf("host=%s dbname=%s user=%s port=%s password=%s sslmode=disable",
+	dns := fmt.Sprintf("host=%s dbname=%s user=%s port=%s password=%s sslmode=disable application_name=pub-sub-go",
 		host,
 		dbname,
 		user,

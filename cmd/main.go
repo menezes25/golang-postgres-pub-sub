@@ -22,7 +22,7 @@ const (
 	db_host = "localhost"
 	db_name = "event"
 	db_user = "tester"
-	db_port = "5432"
+	db_port = "5432" // docker-compose 15432
 	db_pass = "tester"
 )
 

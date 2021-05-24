@@ -1,0 +1,41 @@
+version: '2.4'
+
+services:
+  postgres:
+    image: postgres:13.1-alpine
+    environment:
+      POSTGRES_PASSWORD: "tester"
+      POSTGRES_USER: "tester"
+      POSTGRES_DB: "event"
+      TZ: "America/Sao_Paulo"
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgresqldata:/var/lib/postgresql/data
+    networks:
+      - back-end
+    # cpuset: "0"
+    # cpus: "0.5"
+    # mem_limit: 2048m
+
+  pgadmin:
+    image: dpage/pgadmin4:5.0
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "postgres@postgres.com.br"
+      PGADMIN_DEFAULT_PASSWORD: "toor"
+    ports:
+      - "16543:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmindata:/var/lib/pgadmin
+    networks:
+      - back-end
+
+networks:
+  back-end:
+    driver: bridge
+
+volumes:
+  postgresqldata:
+  pgadmindata:
