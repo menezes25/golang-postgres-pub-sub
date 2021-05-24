@@ -13,11 +13,6 @@ const (
 	PG_DELETE_OP = "DELETE"
 )
 
-type PgEvent struct {
-	Op      string      `json:"op,omitempty"`
-	Payload interface{} `json:"payload,omitempty"`
-}
-
 func HandleEventData(ctx context.Context, eventDataChan chan DataEvent, l *zap.SugaredLogger) <-chan Event {
 	ch := make(chan Event, 1)
 
