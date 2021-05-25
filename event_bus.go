@@ -47,6 +47,7 @@ func (eb *EventBus) Subscribe(topic string) DataChannel {
 	}
 
 	eb.subscribers[topic] = []DataChannel{ch}
+	eb.Topics = append(eb.Topics, topic)
 	return ch
 }
 
@@ -55,17 +56,24 @@ func (eb *EventBus) Unsubscribe(topic string) error {
 	eb.rm.Lock()
 	defer eb.rm.Unlock()
 
-	var channels DataChannelSlice
+	var topics DataChannelSlice
 
 	chans, found := eb.subscribers[topic]
 	if !found {
 		return fmt.Errorf("%w %s", ErrTopicNotFound, topic)
 	}
 
-	copy(channels, chans)
+	copy(topics, chans)
 	delete(eb.subscribers, topic)
+	for i, tpc := range eb.Topics {
+		if tpc == topic {
+			copy(eb.Topics[i:], eb.Topics[i+1:])
+			eb.Topics[len(eb.Topics)-1] = ""
+			eb.Topics = eb.Topics[:len(eb.Topics)-1]
+		}
+	}
 	go func() {
-		for _, ch := range channels {
+		for _, ch := range topics {
 			close(ch)
 		}
 	}()
@@ -86,13 +94,13 @@ func (eb *EventBus) Publish(topic string, data interface{}) error {
 		return ErrTopicNotFound
 	}
 
-	channels := make(DataChannelSlice, len(chans))
-	copy(channels, chans)
+	topics := make(DataChannelSlice, len(chans))
+	copy(topics, chans)
 	go func(data DataEvent, dataChans DataChannelSlice) {
 		for _, ch := range dataChans {
 			ch <- data
 		}
-	}(DataEvent{Data: data, Topic: topic}, channels)
+	}(DataEvent{Data: data, Topic: topic}, topics)
 
 	return nil
 }
