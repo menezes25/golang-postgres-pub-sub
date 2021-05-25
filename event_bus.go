@@ -2,12 +2,13 @@ package gopostgrespubsub
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
 var (
-	ErrEventBusClosed  = errors.New("event bus closed")
-	ErrChannelNotFound = errors.New("channel not found")
+	ErrEventBusClosed = errors.New("event bus closed")
+	ErrTopicNotFound  = errors.New("topic not found")
 )
 
 type DataEvent struct {
@@ -32,9 +33,9 @@ type EventBus struct {
 	rm          sync.RWMutex
 	closed      bool
 	Topics      []string
-	
 }
 
+// Subscribe registra o eventbus em um tópico e retorna o canal onde as informações serão enviadas
 func (eb *EventBus) Subscribe(topic string) DataChannel {
 	eb.rm.Lock()
 	defer eb.rm.Unlock()
@@ -49,10 +50,27 @@ func (eb *EventBus) Subscribe(topic string) DataChannel {
 	return ch
 }
 
+// Unsubscribe remove o tópico da lista de registrados, fecha todos os canais relacionados a esse tópico
 func (eb *EventBus) Unsubscribe(topic string) error {
-	//TODO: remover 'topic' do mapa de subscribers
-	//?: tem que fechar alguma coisa nesse momento?
-	return errors.New("not implemented")
+	eb.rm.Lock()
+	defer eb.rm.Unlock()
+
+	var channels DataChannelSlice
+
+	chans, found := eb.subscribers[topic]
+	if !found {
+		return fmt.Errorf("%w %s", ErrTopicNotFound, topic)
+	}
+
+	copy(channels, chans)
+	delete(eb.subscribers, topic)
+	go func() {
+		for _, ch := range channels {
+			close(ch)
+		}
+	}()
+
+	return nil
 }
 
 func (eb *EventBus) Publish(topic string, data interface{}) error {
@@ -65,7 +83,7 @@ func (eb *EventBus) Publish(topic string, data interface{}) error {
 
 	chans, found := eb.subscribers[topic]
 	if !found {
-		return ErrChannelNotFound
+		return ErrTopicNotFound
 	}
 
 	channels := make(DataChannelSlice, len(chans))
