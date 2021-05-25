@@ -13,6 +13,28 @@ const (
 	PG_DELETE_OP = "DELETE"
 )
 
+func HandleBoletoData(ctx context.Context, eventDataChan chan DataEvent, l *zap.SugaredLogger) <-chan Event {
+	ch := make(chan Event, 1)
+
+	go func() {
+		l.Debug("processing Boleto Data")
+		for {
+			select {
+			case <-eventDataChan:
+				ch <- Event{
+					Type: "boleto",
+					Payload: "code gui é massa",
+				}
+			case <-ctx.Done():
+				close(ch)
+				return
+			}
+		}
+	}()
+
+	return ch
+}
+
 func HandleEventData(ctx context.Context, eventDataChan chan DataEvent, l *zap.SugaredLogger) <-chan Event {
 	ch := make(chan Event, 1)
 

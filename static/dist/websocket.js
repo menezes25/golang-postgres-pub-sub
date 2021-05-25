@@ -38,7 +38,7 @@ function handleWsError(errorEvent) {
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 function createNewSocket() {
-  const socket = new WebSocket(`${BASE_URL}/ws/topic?listen=documents,users`);
+  const socket = new WebSocket(`${BASE_URL}/ws/topic?listen=boleto,event`);
   socket.onopen = handleWsOpen;
   socket.onmessage = handleWsMessage;
   socket.onclose = handleWsClose;

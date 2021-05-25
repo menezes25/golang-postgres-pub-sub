@@ -13,6 +13,7 @@ import (
 	"postgres_pub_sub/trasnport/rest"
 	"postgres_pub_sub/trasnport/websocket"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -56,7 +57,7 @@ func run(l *zap.SugaredLogger) error {
 		return err
 	}
 
-	postgresEventBus := gopostgrespubsub.NewEventBus([]string{"event", "documents"})
+	postgresEventBus := gopostgrespubsub.NewEventBus([]string{"event", "boleto"})
 	postgresCli.WithEventBus(postgresEventBus)
 
 	err = postgresCli.StartListeningToNotifications(ctx)
@@ -65,10 +66,14 @@ func run(l *zap.SugaredLogger) error {
 	}
 
 	dataEventChan := postgresEventBus.Subscribe("event")
+	dataBoletoChan := postgresEventBus.Subscribe("boleto")
 
-	newResponseChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
+	eventChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
+	boletoChan := gopostgrespubsub.HandleBoletoData(ctx, dataBoletoChan, l)
 
-	wsManager := websocket.New(newResponseChan)
+	out := merge(eventChan, boletoChan)
+
+	wsManager := websocket.New(out)
 
 	router := httprouter.New()
 
@@ -109,7 +114,35 @@ func run(l *zap.SugaredLogger) error {
 	select {
 	case <-time.After(20 * time.Second):
 		return errors.New("shutdown timedout")
-	case <-newResponseChan:
+	case <-eventChan:
 		return nil
 	}
+}
+
+//TODO: mover para o lugar "certo"
+func merge(cs ...<-chan gopostgrespubsub.Event) <-chan gopostgrespubsub.Event {
+	var wg sync.WaitGroup
+	out := make(chan gopostgrespubsub.Event, 1)
+
+	// Start an output goroutine for each input channel in cs.  output
+	// copies values from c to out until c is closed, then calls wg.Done.
+	output := func(c <-chan gopostgrespubsub.Event) {
+		for n := range c {
+			out <- n
+		}
+		wg.Done()
+	}
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go output(c)
+	}
+
+	// Start a goroutine to close out once all the output goroutines are
+	// done.  This must start after the wg.Add call.
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
+	return out
 }
