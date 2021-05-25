@@ -90,8 +90,8 @@ const createEventTable = `
 CREATE TABLE "event" (
 	"id" SERIAL PRIMARY KEY ,
 	"name" varchar,
-	"created_at" timestamp,
-	"updated_at" timestamp
+	"created_at" timestamptz,
+	"updated_at" timestamptz
   );
 `
 
@@ -99,8 +99,8 @@ const createBoletoTable = `
 CREATE TABLE "boleto" (
 	"id" SERIAL PRIMARY KEY,
 	"code" varchar(55) NOT NULL,
-	"created_at" timestamp NOT NULL DEFAULT NOW(),
-	"updated_at" timestamp NOT NULL DEFAULT NOW()
+	"created_at" timestamptz NOT NULL DEFAULT NOW(),
+	"updated_at" timestamptz NOT NULL DEFAULT NOW()
   );
 `
 
