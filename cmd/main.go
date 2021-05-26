@@ -54,7 +54,9 @@ func run(l *zap.SugaredLogger) error {
 		return err
 	}
 
-	postgresEventBus := gopostgrespubsub.NewEventBus([]string{"event", "boleto"})
+	const topicEvent = "event"
+	const topicBoleto = "boleto"
+	postgresEventBus := gopostgrespubsub.NewEventBus([]string{topicEvent, topicBoleto})
 	postgresCli.WithEventBus(postgresEventBus)
 
 	err = postgresCli.StartListeningToNotifications(ctx)
@@ -62,11 +64,11 @@ func run(l *zap.SugaredLogger) error {
 		return err
 	}
 
-	dataEventChan := postgresEventBus.Subscribe("event")
-	dataBoletoChan := postgresEventBus.Subscribe("boleto")
+	dataEventChan := postgresEventBus.Subscribe(topicEvent)
+	dataBoletoChan := postgresEventBus.Subscribe(topicBoleto)
 	fanInEvent := gopostgrespubsub.Merge(
-		gopostgrespubsub.HandleEventData(ctx, dataEventChan, l),
-		gopostgrespubsub.HandleBoletoData(ctx, dataBoletoChan, l),
+		gopostgrespubsub.HandleData(ctx, dataEventChan, l, topicEvent, gopostgrespubsub.HandlePostgresDataEvent),
+		gopostgrespubsub.HandleData(ctx, dataBoletoChan, l, topicBoleto, gopostgrespubsub.HandlePostgresDataBoleto),
 	)
 
 	transHttpRouter, err := transporthttp.NewTransportHttp(postgresCli, fanInEvent)
