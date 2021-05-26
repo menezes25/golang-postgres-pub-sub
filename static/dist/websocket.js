@@ -15,7 +15,13 @@ function handleWsOpen(openEvent) {
 
 function handleWsMessage(messageEvent) {
   console.debug('WebsocketMessage', messageEvent);
-  console.debug('Dados recebidos do servidor:', messageEvent.data);
+
+  try {
+    console.debug('Dados recebidos do servidor:', JSON.parse(messageEvent.data));  
+  } catch (error) {
+    console.debug(error);
+    console.debug('Dados recebidos do servidor:', messageEvent.data);  
+  }
 }
 
 async function handleWsClose(closeEvent) {
