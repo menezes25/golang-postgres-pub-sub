@@ -9,13 +9,17 @@ const (
 )
 
 type Event struct {
-	Type    EventType `json:"type,omitempty"`
-	Payload string    `json:"payload,omitempty"`
+	Type    EventType   `json:"type,omitempty"`
+	Payload interface{} `json:"payload,omitempty"`
 }
 
 type Notification struct {
 	Channel string `json:"channel,omitempty"`
 	Payload string `json:"payload,omitempty"`
+}
+
+func (et EventType) Type() string {
+	return string(et)
 }
 
 func Merge(cs ...<-chan Event) <-chan Event {

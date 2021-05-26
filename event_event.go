@@ -13,6 +13,13 @@ type EventPayload struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
+type EventPayloadRes struct {
+	Data      EventPayload `json:"data"`
+	Success   bool         `json:"success"`
+	Operation string       `json:"operation"`
+	Message   string       `json:"message"`
+}
+
 func HandlePostgresDataEvent(eventData DataEvent, responseChan chan Event) {
 	type EventData struct {
 		Op      string       `json:"op,omitempty"`
@@ -30,19 +37,25 @@ func HandlePostgresDataEvent(eventData DataEvent, responseChan chan Event) {
 	case PG_INSERT_OP:
 		r, err := event.Payload.handleInsertEvent()
 		if err != nil {
-			r = "error" + err.Error()
+			pErr := "error" + err.Error()
+			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			return
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_UPDATE_OP:
 		r, err := event.Payload.handleUpdateEvent()
 		if err != nil {
-			r = "error" + err.Error()
+			pErr := "error" + err.Error()
+			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			return
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_DELETE_OP:
 		r, err := event.Payload.handleDeleteEvent()
 		if err != nil {
-			r = "error" + err.Error()
+			pErr := "error" + err.Error()
+			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			return
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	default:
@@ -50,22 +63,40 @@ func HandlePostgresDataEvent(eventData DataEvent, responseChan chan Event) {
 	}
 }
 
-func (e EventPayload) handleInsertEvent() (string, error) {
+func (e EventPayload) handleInsertEvent() (EventPayloadRes, error) {
 	println("processing insert event ", e.Name)
 	<-time.After(500 * time.Millisecond)
-	return fmt.Sprint("event ", e.Name, " insert processed"), nil
+	bpr := EventPayloadRes{
+		Data:      e,
+		Success:   true,
+		Operation: PG_INSERT_OP,
+		Message:   fmt.Sprint("event ", e.Name, " insert processed"),
+	}
+	return bpr, nil
 }
 
-func (e EventPayload) handleUpdateEvent() (string, error) {
+func (e EventPayload) handleUpdateEvent() (EventPayloadRes, error) {
 	println("processing update event ", e.Name)
 	<-time.After(500 * time.Millisecond)
 	println("event", e.Name, "update processed")
-	return "", nil
+	pr := EventPayloadRes{
+		Data:      e,
+		Success:   true,
+		Operation: PG_UPDATE_OP,
+		Message:   fmt.Sprint("event ", e.Name, " update processed"),
+	}
+	return pr, nil
 }
 
-func (e EventPayload) handleDeleteEvent() (string, error) {
+func (e EventPayload) handleDeleteEvent() (EventPayloadRes, error) {
 	println("processing delete event ", e.Name)
 	<-time.After(500 * time.Millisecond)
 	println("event", e.Name, "delete processed")
-	return "", nil
+	pr := EventPayloadRes{
+		Data:      e,
+		Success:   true,
+		Operation: PG_DELETE_OP,
+		Message:   fmt.Sprint("event ", e.Name, " delete processed"),
+	}
+	return pr, nil
 }

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	gopostgrespubsub "postgres_pub_sub"
 	"postgres_pub_sub/postgres"
@@ -20,8 +21,8 @@ type TransportHttp struct {
 // zero-memory way to represent a pointer to struct.
 var _ http.Handler = (*TransportHttp)(nil)
 
-func NewTransportHttp(postgresCli *postgres.PostgresClient, fanInEvent <-chan gopostgrespubsub.Event) (*TransportHttp, error) {
-	wsManager := websocket.New(fanInEvent)
+func NewTransportHttp(ctx context.Context, postgresCli *postgres.PostgresClient, fanInEvent <-chan gopostgrespubsub.Event) (*TransportHttp, error) {
+	wsManager := websocket.New(ctx, fanInEvent)
 	tr := TransportHttp{
 		router:      httprouter.New(),
 		postgresCli: postgresCli,

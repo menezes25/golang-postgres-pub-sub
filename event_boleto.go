@@ -13,6 +13,13 @@ type BoletoPayload struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
+type BoletoPayloadRes struct {
+	Data      BoletoPayload `json:"data"`
+	Success   bool          `json:"success"`
+	Operation string        `json:"operation"`
+	Message   string        `json:"message"`
+}
+
 func HandlePostgresDataBoleto(eventData DataEvent, responseChan chan Event) {
 	type EventData struct {
 		Op      string        `json:"op,omitempty"`
@@ -30,19 +37,25 @@ func HandlePostgresDataBoleto(eventData DataEvent, responseChan chan Event) {
 	case PG_INSERT_OP:
 		r, err := event.Payload.handleInsertEvent()
 		if err != nil {
-			r = "error" + err.Error()
+			pErr := "error" + err.Error()
+			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			return
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_UPDATE_OP:
 		r, err := event.Payload.handleUpdateEvent()
 		if err != nil {
-			r = "error" + err.Error()
+			pErr := "error" + err.Error()
+			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			return
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	case PG_DELETE_OP:
 		r, err := event.Payload.handleDeleteEvent()
 		if err != nil {
-			r = "error" + err.Error()
+			pErr := "error" + err.Error()
+			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			return
 		}
 		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
 	default:
@@ -50,22 +63,40 @@ func HandlePostgresDataBoleto(eventData DataEvent, responseChan chan Event) {
 	}
 }
 
-func (e BoletoPayload) handleInsertEvent() (string, error) {
+func (e BoletoPayload) handleInsertEvent() (BoletoPayloadRes, error) {
 	println("processing insert boleto ", e.Code)
 	<-time.After(2000 * time.Millisecond)
-	return fmt.Sprint("boleto ", e.Code, " insert processed"), nil
+	pr := BoletoPayloadRes{
+		Data:      e,
+		Success:   true,
+		Operation: PG_INSERT_OP,
+		Message:   fmt.Sprint("boleto ", e.Code, " insert processed"),
+	}
+	return pr, nil
 }
 
-func (e BoletoPayload) handleUpdateEvent() (string, error) {
+func (e BoletoPayload) handleUpdateEvent() (BoletoPayloadRes, error) {
 	println("processing update boleto ", e.Code)
 	<-time.After(2000 * time.Millisecond)
 	println("boleto", e.Code, "update processed")
-	return "", nil
+	pr := BoletoPayloadRes{
+		Data:      e,
+		Success:   true,
+		Operation: PG_UPDATE_OP,
+		Message:   fmt.Sprint("boleto ", e.Code, " update processed"),
+	}
+	return pr, nil
 }
 
-func (e BoletoPayload) handleDeleteEvent() (string, error) {
+func (e BoletoPayload) handleDeleteEvent() (BoletoPayloadRes, error) {
 	println("processing delete boleto ", e.Code)
 	<-time.After(2000 * time.Millisecond)
 	println("boleto", e.Code, "delete processed")
-	return "", nil
+	pr := BoletoPayloadRes{
+		Data:      e,
+		Success:   true,
+		Operation: PG_DELETE_OP,
+		Message:   fmt.Sprint("boleto ", e.Code, " delete processed"),
+	}
+	return pr, nil
 }

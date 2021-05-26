@@ -36,11 +36,10 @@ func main() {
 	logger := zapLogger.Sugar()
 
 	err = run(logger)
+	fmt.Printf("Number of hanging goroutines: %d", runtime.NumGoroutine()-1)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
-
-	fmt.Printf("Number of hanging goroutines: %d", runtime.NumGoroutine()-1)
 }
 
 func run(l *zap.SugaredLogger) error {
@@ -71,7 +70,7 @@ func run(l *zap.SugaredLogger) error {
 		gopostgrespubsub.HandleData(ctx, dataBoletoChan, l, topicBoleto, gopostgrespubsub.HandlePostgresDataBoleto),
 	)
 
-	transHttpRouter, err := transporthttp.NewTransportHttp(postgresCli, fanInEvent)
+	transHttpRouter, err := transporthttp.NewTransportHttp(ctx, postgresCli, fanInEvent)
 	if err != nil {
 		return err
 	}
@@ -95,8 +94,9 @@ func run(l *zap.SugaredLogger) error {
 	cancel()
 
 	//* espera finalização das subrotinas
+	// FIXME: Select sempre vai retornar timeout
 	select {
-	case <-time.After(20 * time.Second):
+	case <-time.After(5 * time.Second):
 		return errors.New("shutdown timedout")
 	}
 }
