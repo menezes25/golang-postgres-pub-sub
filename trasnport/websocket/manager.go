@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	gopostgrespubsub "postgres_pub_sub"
 	"strings"
 
@@ -32,11 +33,13 @@ func New(eventChan <-chan gopostgrespubsub.Event) *WsManager {
 			fmt.Printf("got message to send to client: %v\n", event)
 
 			for i, c := range w.EventTypeConns[event.Type] {
-				println("sending to conn: ", i)
 				err := wsutil.WriteServerMessage(c, ws.OpText, []byte(event.Payload))
 				if err != nil {
-					return
+					fmt.Fprintf(os.Stderr, "erro na conn [%d] %s. %s retornando.\n", i, c.RemoteAddr(), err.Error())
+					continue
 				}
+
+				fmt.Printf("Enviado com sucesso: conn [%d] %s.\n", i, c.RemoteAddr())
 			}
 		}
 	}()
