@@ -21,7 +21,7 @@ const (
 	db_host = "localhost"
 	db_name = "event"
 	db_user = "tester"
-	db_port = "15432" // docker-compose 15432
+	db_port = "5432" // docker-compose 15432
 	db_pass = "tester"
 )
 
@@ -94,9 +94,10 @@ func run(l *zap.SugaredLogger) error {
 	cancel()
 
 	//* espera finalização das subrotinas
-	// FIXME: Select sempre vai retornar timeout
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(20 * time.Second):
 		return errors.New("shutdown timedout")
+	case <-fanInEvent:
+		return nil
 	}
 }
