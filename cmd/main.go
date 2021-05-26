@@ -64,9 +64,10 @@ func run(l *zap.SugaredLogger) error {
 
 	dataEventChan := postgresEventBus.Subscribe("event")
 	dataBoletoChan := postgresEventBus.Subscribe("boleto")
-	eventChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
-	boletoChan := gopostgrespubsub.HandleBoletoData(ctx, dataBoletoChan, l)
-	fanInEvent := gopostgrespubsub.Merge(eventChan, boletoChan)
+	fanInEvent := gopostgrespubsub.Merge(
+		gopostgrespubsub.HandleEventData(ctx, dataEventChan, l),
+		gopostgrespubsub.HandleBoletoData(ctx, dataBoletoChan, l),
+	)
 
 	transHttpRouter, err := transporthttp.NewTransportHttp(postgresCli, fanInEvent)
 	if err != nil {
@@ -95,7 +96,5 @@ func run(l *zap.SugaredLogger) error {
 	select {
 	case <-time.After(20 * time.Second):
 		return errors.New("shutdown timedout")
-	case <-eventChan:
-		return nil
 	}
 }
