@@ -5,18 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	gopostgrespubsub "postgres_pub_sub"
 	"postgres_pub_sub/postgres"
-	"postgres_pub_sub/trasnport/rest"
-	"postgres_pub_sub/trasnport/websocket"
+	transporthttp "postgres_pub_sub/transport/http"
 	"runtime"
 	"syscall"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 )
 
@@ -47,6 +44,7 @@ func main() {
 }
 
 func run(l *zap.SugaredLogger) error {
+	l.Infof("Starting PUB/SUB, PID: %d", os.Getpid())
 	// ctx, cancel := context.WithCancel(context.Background())
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -66,41 +64,25 @@ func run(l *zap.SugaredLogger) error {
 
 	dataEventChan := postgresEventBus.Subscribe("event")
 	dataBoletoChan := postgresEventBus.Subscribe("boleto")
-
 	eventChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
 	boletoChan := gopostgrespubsub.HandleBoletoData(ctx, dataBoletoChan, l)
+	fanInEvent := gopostgrespubsub.Merge(eventChan, boletoChan)
 
-	out := gopostgrespubsub.Merge(eventChan, boletoChan)
+	transHttpRouter, err := transporthttp.NewTransportHttp(postgresCli, fanInEvent)
+	if err != nil {
+		return err
+	}
 
-	wsManager := websocket.New(out)
-
-	router := httprouter.New()
-
-	// FIXME: Aqui não é lugar do CORS
-	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Access-Control-Request-Method") != "" {
-			header := w.Header()
-			// julienschmidt/httprouter calcula somente os metodos permitidos e armazena no header 'Allow'
-			header.Set("Access-Control-Allow-Methods", header.Get("Allow"))
-			header.Set("Access-Control-Allow-Headers", "Content-Type")
-			header.Set("Access-Control-Allow-Origin", "*")
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-	router.POST("/api/event", rest.MakePostEventHandler(postgresCli))
-	router.GET("/ws/topic", wsManager.MakeListenToEventsHandler())
-
-	l.Infof("listening on: 0.0.0.0:%s", os.Getenv("REST_ADDRESS"))
-	srv := rest.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), router)
+	srv := transporthttp.NewServer(fmt.Sprintf("0.0.0.0:%s", os.Getenv("REST_ADDRESS")), transHttpRouter)
 
 	errchan := make(chan error, 1)
-	go rest.StartServer(srv, l.With("vision_server", "rest"), errchan)
-	l.Info("running rest server")
+	go transporthttp.StartServer(srv, l.With("pubsub_server", "rest"), errchan)
+	l.Infof("running rest server, listening on: %s", srv.Addr)
 
 	select {
 	case <-ctx.Done():
 		l.Infow("shuting servers down with", "error", ctx.Err().Error())
-		rest.ShutdownServer(context.Background(), srv, l.With("server", "rest"))
+		transporthttp.ShutdownServer(context.Background(), srv, l.With("server", "rest"))
 		postgresEventBus.Close()
 	case err := <-errchan:
 		l.Info("rest server crashed with ", err.Error())
