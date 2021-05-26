@@ -13,7 +13,6 @@ import (
 	"postgres_pub_sub/trasnport/rest"
 	"postgres_pub_sub/trasnport/websocket"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 
@@ -25,7 +24,7 @@ const (
 	db_host = "localhost"
 	db_name = "event"
 	db_user = "tester"
-	db_port = "5432" // docker-compose 15432
+	db_port = "15432" // docker-compose 15432
 	db_pass = "tester"
 )
 
@@ -71,7 +70,7 @@ func run(l *zap.SugaredLogger) error {
 	eventChan := gopostgrespubsub.HandleEventData(ctx, dataEventChan, l)
 	boletoChan := gopostgrespubsub.HandleBoletoData(ctx, dataBoletoChan, l)
 
-	out := merge(eventChan, boletoChan)
+	out := gopostgrespubsub.Merge(eventChan, boletoChan)
 
 	wsManager := websocket.New(out)
 
@@ -117,32 +116,4 @@ func run(l *zap.SugaredLogger) error {
 	case <-eventChan:
 		return nil
 	}
-}
-
-//TODO: mover para o lugar "certo"
-func merge(cs ...<-chan gopostgrespubsub.Event) <-chan gopostgrespubsub.Event {
-	var wg sync.WaitGroup
-	out := make(chan gopostgrespubsub.Event, 1)
-
-	// Start an output goroutine for each input channel in cs.  output
-	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(c <-chan gopostgrespubsub.Event) {
-		for n := range c {
-			out <- n
-		}
-		wg.Done()
-	}
-	wg.Add(len(cs))
-	for _, c := range cs {
-		go output(c)
-	}
-
-	// Start a goroutine to close out once all the output goroutines are
-	// done.  This must start after the wg.Add call.
-	go func() {
-		wg.Wait()
-		close(out)
-	}()
-
-	return out
 }
