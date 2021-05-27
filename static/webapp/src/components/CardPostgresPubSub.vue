@@ -19,6 +19,8 @@
 
 <script>
 import CardEvent from "@/components/CardEvent";
+import store from "@/store";
+console.debug(store);
 
 export default {
   name: 'CardPostgresPubSub',
@@ -27,13 +29,13 @@ export default {
     CardEvent,
   },
 
+  data: () => ({
+    sharedState: store.state,
+  }),
+
   computed: {
-    eventsInProgress() {
-      return ['a', 'a'];
-    },
-    completedEvents() {
-      return ['b', 'b'];
-    },
-  }
+    eventsInProgress: function() { return this.sharedState.eventsInProgress },
+    completedEvents: function() { return this.sharedState.completedEvents },
+  },
 }
 </script>
