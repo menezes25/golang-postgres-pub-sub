@@ -1,3 +1,4 @@
+import Swal from "sweetalert2";
 import store from "@/store";
 
 const BASE_URL = process.env.VUE_APP_WEBSOCKET_BASE_URL;
@@ -6,6 +7,15 @@ const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
 function handleWsOpen(/*openEvent*/) {
   console.info('[WEBSOCKET] Conexão estabilizada');
+
+  Swal.fire({
+    icon: 'success',
+    titleText: 'WS Conexão estabilizada',
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    showCloseButton: true,
+  });
 }
 
 function handleWsMessage(messageEvent) {
@@ -33,7 +43,22 @@ async function handleWsClose(closeEvent) {
 }
 
 function handleWsError(errorEvent) {
-  console.debug('WebsocketError', errorEvent);
+  console.debug('[WEBSOCKET] Error:', errorEvent);
+
+  const readyStateText = new Map()
+    .set(WebSocket.CONNECTING, 'CONNECTING')
+    .set(WebSocket.OPEN, 'OPEN')
+    .set(WebSocket.CLOSING, 'CLOSING')
+    .set(WebSocket.CLOSED, 'CLOSED')
+
+  Swal.fire({
+    icon: 'error',
+    titleText: `WS Error: state ${readyStateText.get(errorEvent.srcElement.readyState)}`,
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    showCloseButton: true,
+  });
 }
 
 function startWebSocket() {
@@ -42,6 +67,16 @@ function startWebSocket() {
   socket.onmessage = handleWsMessage;
   socket.onclose = handleWsClose;
   socket.onerror = handleWsError;
+
+  Swal.fire({
+    title: 'WS Conectando...',
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    showCloseButton: true,
+  });
+  Swal.showLoading()
+
   return socket;
 }
 
