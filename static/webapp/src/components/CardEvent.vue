@@ -3,6 +3,7 @@
     <h2 class="font-light text-center">
       {{title}}
     </h2>
+    <p class="font-thin">Total: {{events.length}}</p>
     <ul
       class="my-4 list-disc list-inside pl-4"
       :class="[ cardEventColorClass ]"

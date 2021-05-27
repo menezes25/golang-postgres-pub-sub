@@ -6,8 +6,8 @@
       <div class="border border-white rounded-md p-4">
         <h2 class="text-gray-600 text-xl font-light text-center mb-2">Criar evento</h2>
         <div class="flex gap-x-1">
-          <input type="text" placeholder="Nome do evento..." class="input input--blue">
-          <button class="btn btn--blue">Criar</button>
+          <input v-model="event" type="text" placeholder="Nome do evento..." class="input input--blue">
+          <button @click="clickCreateEvent()" class="btn btn--blue">Criar</button>
         </div>
       </div>
 
@@ -20,7 +20,7 @@
 <script>
 import CardEvent from "@/components/CardEvent";
 import store from "@/store";
-console.debug(store);
+import api from "@/services/api";
 
 export default {
   name: 'CardPostgresPubSub',
@@ -31,11 +31,24 @@ export default {
 
   data: () => ({
     sharedState: store.state,
+    event: '',
   }),
 
   computed: {
     eventsInProgress: function() { return this.sharedState.eventsInProgress },
     completedEvents: function() { return this.sharedState.completedEvents },
   },
+
+  methods: {
+    async clickCreateEvent() {
+      try {
+        const response = await api.saveNewEvent({ event: this.event });
+        console.debug("ok! Evento criado!", { response });
+        this.event = '';
+      } catch (error) {
+        console.debug('Erro ao criar evento', { error });
+      }
+    }
+  }
 }
 </script>
