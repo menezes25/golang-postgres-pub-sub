@@ -2,11 +2,11 @@
   <div class="pt-8 px-4 pb-12">
     <h1 class="text-gray-700 text-2xl font-light text-center mb-4">POC - Postgres PUB/SUB</h1>
 
-    <div class="grid grid-cols-2-1-1 gap-x-1">
+    <div class="flex flex-col gap-y-1 md:grid md:grid-cols-2-1-1 md:gap-y-0 md:gap-x-1">
       <div class="border border-white rounded-md p-4">
         <h2 class="text-gray-600 text-xl font-light text-center mb-2">Criar evento</h2>
-        <div class="flex gap-x-1">
-          <input v-model="event" type="text" placeholder="Nome do evento..." class="input input--blue">
+        <div class="flex justify-center gap-x-1">
+          <input v-model="event" type="text" placeholder="Nome do evento..." class="input input--blue w-full max-w-xs flex-shrink">
           <button @click="clickCreateEvent()" class="btn btn--blue">Criar</button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 <template>
-  <div id="app" class="h-full w-full pt-16 bg-gradient-to-r from-blueGrey to-cadetBlue">
-    <div class="container mx-auto max-w-screen-md rounded-lg bg-gray-100 bg-opacity-50">
+  <div id="app" class="h-full w-full pt-16 px-1 bg-gradient-to-r from-blueGrey to-cadetBlue">
+    <div class="container mx-auto max-w-screen-lg rounded-lg bg-gray-100 bg-opacity-50">
       <CardPostgresPubSub />
     </div>
   </div>
