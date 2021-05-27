@@ -83,7 +83,7 @@ func (wm *WsManager) MakeListenToEventsHandler() httprouter.Handle {
 			return
 		}
 
-		fmt.Println(topics)
+		fmt.Printf("WS REQUEST [%s] listen: %s\n", r.RemoteAddr, topics)
 
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
@@ -117,16 +117,15 @@ func validateListen(listenStr string) ([]gopostgrespubsub.EventType, error) {
 }
 
 func (wm *WsManager) pingAndRemoveConnections() {
-	connToBeClosed := make([]net.Conn, 0)
+	connToBeClosed := make(map[net.Conn]interface{}) // Set (abstract data type)
 	activeConnMap := make(map[gopostgrespubsub.EventType][]net.Conn)
 
 	for eventType := range wm.EventTypeConns {
-		// fmt.Printf("PING all cons '%s'\n", eventType)
 		for i, conn := range wm.EventTypeConns[eventType] {
 			err := wsutil.WriteServerMessage(conn, ws.OpPing, nil)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "ERRO [conn %d] [%s] '%s'\n", i, conn.RemoteAddr(), err.Error())
-				connToBeClosed = append(connToBeClosed, conn)
+				fmt.Fprintf(os.Stderr, "PING CONN TO BE CLOSED [conn %d] [%s] ERRO '%s'\n", i, conn.RemoteAddr(), err.Error())
+				connToBeClosed[conn] = nil
 				continue
 			}
 
@@ -139,12 +138,17 @@ func (wm *WsManager) pingAndRemoveConnections() {
 		}
 	}
 
-	for _, conn := range connToBeClosed {
+	for conn := range connToBeClosed {
 		err := conn.Close()
-		if err != nil {
+		if err != nil && !errors.Is(err, net.ErrClosed) {
 			fmt.Fprintf(os.Stderr, "CLOSE CONN ERRO [conn %s] %s\n", conn.RemoteAddr(), err.Error())
 			continue
+
+		} else if err != nil && errors.Is(err, net.ErrClosed) {
+			fmt.Printf("CLOSE CONN OK [conn %s] já estava fechada\n", conn.RemoteAddr())
+			continue
 		}
+
 		fmt.Printf("CLOSE CONN OK [conn %s] fechada\n", conn.RemoteAddr())
 	}
 
@@ -152,15 +156,20 @@ func (wm *WsManager) pingAndRemoveConnections() {
 }
 
 func (wm *WsManager) closeAllClientConnections() {
-	fmt.Printf("INFO fechando todas conexões websocker\n")
+	fmt.Printf("INFO fechando todas conexões websocket\n")
 	for eventType := range wm.EventTypeConns {
 		for _, conn := range wm.EventTypeConns[eventType] {
 			err := conn.Close()
-			if err != nil {
+			if err != nil && !errors.Is(err, net.ErrClosed) {
 				fmt.Fprintf(os.Stderr, "ERRO [conn %s] %s\n", conn.RemoteAddr(), err.Error())
 				continue
+
+			} else if err != nil && errors.Is(err, net.ErrClosed) {
+				fmt.Printf("CLOSE CONN OK [conn %s] já estava fechada\n", conn.RemoteAddr())
+				continue
 			}
-			fmt.Printf("OK [conn %s] fechada\n", conn.RemoteAddr())
+
+			fmt.Printf("CLOSE CONN OK [conn %s] fechada\n", conn.RemoteAddr())
 		}
 	}
 }
