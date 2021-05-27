@@ -117,17 +117,38 @@ func validateListen(listenStr string) ([]gopostgrespubsub.EventType, error) {
 }
 
 func (wm *WsManager) pingAndRemoveConnections() {
+	connToBeClosed := make([]net.Conn, 0)
+	activeConnMap := make(map[gopostgrespubsub.EventType][]net.Conn)
+
 	for eventType := range wm.EventTypeConns {
-		fmt.Printf("PING all cons '%s'\n", eventType)
+		// fmt.Printf("PING all cons '%s'\n", eventType)
 		for i, conn := range wm.EventTypeConns[eventType] {
 			err := wsutil.WriteServerMessage(conn, ws.OpPing, nil)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "ERRO [conn %d] [%s] %s\n", i, conn.RemoteAddr(), err.Error())
+				fmt.Fprintf(os.Stderr, "ERRO [conn %d] [%s] '%s'\n", i, conn.RemoteAddr(), err.Error())
+				connToBeClosed = append(connToBeClosed, conn)
 				continue
 			}
-			fmt.Printf("PING [conn %d] '%s'\n", i, eventType)
+
+			fmt.Printf("PING [conn %d] [%s] '%s'\n", i, conn.RemoteAddr(), eventType)
+			if conns, found := activeConnMap[eventType]; found {
+				activeConnMap[eventType] = append(conns, conn)
+			} else {
+				activeConnMap[eventType] = []net.Conn{conn}
+			}
 		}
 	}
+
+	for _, conn := range connToBeClosed {
+		err := conn.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "CLOSE CONN ERRO [conn %s] %s\n", conn.RemoteAddr(), err.Error())
+			continue
+		}
+		fmt.Printf("CLOSE CONN OK [conn %s] fechada\n", conn.RemoteAddr())
+	}
+
+	wm.EventTypeConns = activeConnMap
 }
 
 func (wm *WsManager) closeAllClientConnections() {
