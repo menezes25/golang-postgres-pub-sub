@@ -126,7 +126,8 @@ func (pc *PostgresClient) migrateTables(ctx context.Context) error {
 	// 	return err
 	// }
 
-	err := pc.createTriggerAndTriggerFuncs(ctx, []string{"event", "boleto"})
+	// err := pc.createTriggerAndTriggerFuncs(ctx, []string{"event", "boleto"})
+	err := pc.createTriggerAndTriggerFuncs(ctx, []string{"boleto"})
 	if err != nil {
 		return err
 	}
