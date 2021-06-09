@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -40,19 +39,20 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err = cli.connPool.Exec(ctx, createDatabase)
-	if err != nil {
-		sqlErr := &pgconn.PgError{}
-		errors.As(err, &sqlErr)
-		//* se o banco já existe não queremos retornar erro
-		if !isDuplicateDatabaseError(sqlErr) {
-			cli.Close()
-			return nil, err
-		}
+	// TODO: Como LIB não se cria database
+	// _, err = cli.connPool.Exec(ctx, createDatabase)
+	// if err != nil {
+	// 	sqlErr := &pgconn.PgError{}
+	// 	errors.As(err, &sqlErr)
+	// 	//* se o banco já existe não queremos retornar erro
+	// 	if !isDuplicateDatabaseError(sqlErr) {
+	// 		cli.Close()
+	// 		return nil, err
+	// 	}
 
-		// cli.Close()
-		// return nil, err
-	}
+	// 	// cli.Close()
+	// 	// return nil, err
+	// }
 	cli.Close()
 
 	cli, err = newPostgresClient(host, dbname, user, port, password, logger)
