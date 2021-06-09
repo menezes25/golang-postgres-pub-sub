@@ -116,17 +116,17 @@ func (pc *PostgresClient) WithEventBus(eventBus *gopostgrespubsub.EventBus) {
 }
 
 func (pc *PostgresClient) migrateTables(ctx context.Context) error {
-	err := pc.createTable(ctx, createEventTable)
-	if err != nil {
-		return err
-	}
+	// err := pc.createTable(ctx, createEventTable)
+	// if err != nil {
+	// 	return err
+	// }
 
-	err = pc.createTable(ctx, createBoletoTable)
-	if err != nil {
-		return err
-	}
+	// err = pc.createTable(ctx, createBoletoTable)
+	// if err != nil {
+	// 	return err
+	// }
 
-	err = pc.createTriggerAndTriggerFuncs(ctx, []string{"event", "boleto"})
+	err := pc.createTriggerAndTriggerFuncs(ctx, []string{"event", "boleto"})
 	if err != nil {
 		return err
 	}

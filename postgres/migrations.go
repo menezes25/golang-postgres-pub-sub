@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -56,6 +57,7 @@ func (pc *PostgresClient) createTriggerAndTriggerFuncs(ctx context.Context, tabl
 		}
 
 		createTriggerAndTriggerFuncsQry := tmplBytes.String()
+		fmt.Printf("\n\ncreateTriggerAndTriggerFuncsQry\n\n%s\n\n", createTriggerAndTriggerFuncsQry)
 
 		_, err = pc.connPool.Exec(ctx, createTriggerAndTriggerFuncsQry)
 		if err != nil {
