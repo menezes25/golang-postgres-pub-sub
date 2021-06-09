@@ -8,9 +8,10 @@ import (
 	"net"
 	"net/http"
 	"os"
-	gopostgrespubsub "postgres_pub_sub"
 	"strings"
 	"time"
+
+	gopostgrespubsub "github.com/menezes25/golang-postgres-pub-sub"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"

@@ -3,7 +3,8 @@ package rest
 import (
 	"encoding/json"
 	"net/http"
-	"postgres_pub_sub/postgres"
+
+	"github.com/menezes25/golang-postgres-pub-sub/postgres"
 
 	"github.com/julienschmidt/httprouter"
 )

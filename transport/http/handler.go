@@ -3,10 +3,11 @@ package http
 import (
 	"context"
 	"net/http"
-	gopostgrespubsub "postgres_pub_sub"
-	"postgres_pub_sub/postgres"
-	"postgres_pub_sub/transport/http/rest"
-	"postgres_pub_sub/transport/http/websocket"
+
+	gopostgrespubsub "github.com/menezes25/golang-postgres-pub-sub"
+	"github.com/menezes25/golang-postgres-pub-sub/postgres"
+	"github.com/menezes25/golang-postgres-pub-sub/transport/http/rest"
+	"github.com/menezes25/golang-postgres-pub-sub/transport/http/websocket"
 
 	"github.com/julienschmidt/httprouter"
 )

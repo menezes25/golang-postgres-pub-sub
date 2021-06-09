@@ -7,12 +7,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	gopostgrespubsub "postgres_pub_sub"
-	"postgres_pub_sub/postgres"
-	transporthttp "postgres_pub_sub/transport/http"
 	"runtime"
 	"syscall"
 	"time"
+
+	gopostgrespubsub "github.com/menezes25/golang-postgres-pub-sub"
+	"github.com/menezes25/golang-postgres-pub-sub/postgres"
+	transporthttp "github.com/menezes25/golang-postgres-pub-sub/transport/http"
 
 	"go.uber.org/zap"
 )

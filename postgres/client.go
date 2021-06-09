@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	gopostgrespubsub "postgres_pub_sub"
 	"time"
+
+	gopostgrespubsub "github.com/menezes25/golang-postgres-pub-sub"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"

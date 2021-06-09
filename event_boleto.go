@@ -32,6 +32,7 @@ func HandlePostgresDataBoleto(eventData DataEvent, responseChan chan Event) {
 	if err != nil {
 		responseChan <- Event{Payload: err.Error(), Type: EventType(eventData.Topic)}
 	}
+	fmt.Println("ok")
 
 	switch event.Op {
 	case PG_INSERT_OP:

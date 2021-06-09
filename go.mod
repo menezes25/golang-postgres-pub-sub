@@ -1,4 +1,5 @@
-module postgres_pub_sub
+// module postgres_pub_sub
+module github.com/menezes25/golang-postgres-pub-sub
 
 go 1.16
 
