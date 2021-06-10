@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	gopostgrespubsub "github.com/menezes25/golang-postgres-pub-sub"
+	"github.com/menezes25/golang-postgres-pub-sub/internal"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"
@@ -23,7 +23,7 @@ type PostgresClient struct {
 
 	psql squirrel.StatementBuilderType
 
-	eventBus *gopostgrespubsub.EventBus
+	eventBus *internal.EventBus
 }
 
 // NewProduction se conecta ao banco de dados tenta criar o banco e suas tabelas e retorna um cliente
@@ -111,7 +111,7 @@ func (pc *PostgresClient) Close() {
 	pc.connPool.Close()
 }
 
-func (pc *PostgresClient) WithEventBus(eventBus *gopostgrespubsub.EventBus) {
+func (pc *PostgresClient) WithEventBus(eventBus *internal.EventBus) {
 	pc.eventBus = eventBus
 }
 

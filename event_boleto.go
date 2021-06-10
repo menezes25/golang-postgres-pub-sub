@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/menezes25/golang-postgres-pub-sub/internal"
 )
 
 type BoletoPayload struct {
@@ -20,7 +22,7 @@ type BoletoPayloadRes struct {
 	Message   string        `json:"message"`
 }
 
-func HandlePostgresDataBoleto(eventData DataEvent, responseChan chan Event) {
+func HandlePostgresDataBoleto(eventData internal.DataEvent, responseChan chan internal.Event) {
 	type EventData struct {
 		Op      string        `json:"op,omitempty"`
 		Payload BoletoPayload `json:"payload,omitempty"`
@@ -30,37 +32,37 @@ func HandlePostgresDataBoleto(eventData DataEvent, responseChan chan Event) {
 	payload := eventData.Data.(string)
 	err := json.Unmarshal([]byte(payload), &event)
 	if err != nil {
-		responseChan <- Event{Payload: err.Error(), Type: EventType(eventData.Topic)}
+		responseChan <- internal.Event{Payload: err.Error(), Type: internal.EventType(eventData.Topic)}
 	}
 	fmt.Println("ok")
 
 	switch event.Op {
-	case PG_INSERT_OP:
+	case internal.PG_INSERT_OP:
 		r, err := event.Payload.handleInsertEvent()
 		if err != nil {
 			pErr := "error" + err.Error()
-			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			responseChan <- internal.Event{Payload: pErr, Type: internal.EventType(eventData.Topic)}
 			return
 		}
-		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
-	case PG_UPDATE_OP:
+		responseChan <- internal.Event{Payload: r, Type: internal.EventType(eventData.Topic)}
+	case internal.PG_UPDATE_OP:
 		r, err := event.Payload.handleUpdateEvent()
 		if err != nil {
 			pErr := "error" + err.Error()
-			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			responseChan <- internal.Event{Payload: pErr, Type: internal.EventType(eventData.Topic)}
 			return
 		}
-		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
-	case PG_DELETE_OP:
+		responseChan <- internal.Event{Payload: r, Type: internal.EventType(eventData.Topic)}
+	case internal.PG_DELETE_OP:
 		r, err := event.Payload.handleDeleteEvent()
 		if err != nil {
 			pErr := "error" + err.Error()
-			responseChan <- Event{Payload: pErr, Type: EventType(eventData.Topic)}
+			responseChan <- internal.Event{Payload: pErr, Type: internal.EventType(eventData.Topic)}
 			return
 		}
-		responseChan <- Event{Payload: r, Type: EventType(eventData.Topic)}
+		responseChan <- internal.Event{Payload: r, Type: internal.EventType(eventData.Topic)}
 	default:
-		responseChan <- Event{Payload: "operation unkown"}
+		responseChan <- internal.Event{Payload: "operation unkown"}
 	}
 }
 
@@ -70,7 +72,7 @@ func (e BoletoPayload) handleInsertEvent() (BoletoPayloadRes, error) {
 	pr := BoletoPayloadRes{
 		Data:      e,
 		Success:   true,
-		Operation: PG_INSERT_OP,
+		Operation: internal.PG_INSERT_OP,
 		Message:   fmt.Sprint("boleto ", e.Code, " insert processed"),
 	}
 	return pr, nil
@@ -83,7 +85,7 @@ func (e BoletoPayload) handleUpdateEvent() (BoletoPayloadRes, error) {
 	pr := BoletoPayloadRes{
 		Data:      e,
 		Success:   true,
-		Operation: PG_UPDATE_OP,
+		Operation: internal.PG_UPDATE_OP,
 		Message:   fmt.Sprint("boleto ", e.Code, " update processed"),
 	}
 	return pr, nil
@@ -96,7 +98,7 @@ func (e BoletoPayload) handleDeleteEvent() (BoletoPayloadRes, error) {
 	pr := BoletoPayloadRes{
 		Data:      e,
 		Success:   true,
-		Operation: PG_DELETE_OP,
+		Operation: internal.PG_DELETE_OP,
 		Message:   fmt.Sprint("boleto ", e.Code, " delete processed"),
 	}
 	return pr, nil

@@ -1,4 +1,4 @@
-package gopostgrespubsub
+package internal
 
 import (
 	"fmt"

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	gopostgrespubsub "github.com/menezes25/golang-postgres-pub-sub"
+	"github.com/menezes25/golang-postgres-pub-sub/internal"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -24,12 +24,12 @@ type GenericContract struct {
 }
 
 type WsManager struct {
-	EventTypeConns map[gopostgrespubsub.EventType][]net.Conn
+	EventTypeConns map[internal.EventType][]net.Conn
 }
 
-func New(ctx context.Context, eventChan <-chan gopostgrespubsub.Event) *WsManager {
+func New(ctx context.Context, eventChan <-chan internal.Event) *WsManager {
 	wm := &WsManager{
-		EventTypeConns: make(map[gopostgrespubsub.EventType][]net.Conn),
+		EventTypeConns: make(map[internal.EventType][]net.Conn),
 	}
 
 	go func() {
@@ -103,15 +103,15 @@ func (wm *WsManager) MakeListenToEventsHandler() httprouter.Handle {
 	}
 }
 
-func validateListen(listenStr string) ([]gopostgrespubsub.EventType, error) {
+func validateListen(listenStr string) ([]internal.EventType, error) {
 	if listenStr == "" {
 		return nil, errors.New("a requisição deve informar no minimo um listen")
 	}
 
 	listens := strings.Split(listenStr, ",")
-	evetntTypeList := make([]gopostgrespubsub.EventType, 0)
+	evetntTypeList := make([]internal.EventType, 0)
 	for _, listen := range listens {
-		evetntTypeList = append(evetntTypeList, gopostgrespubsub.EventType(listen))
+		evetntTypeList = append(evetntTypeList, internal.EventType(listen))
 	}
 
 	return evetntTypeList, nil
@@ -119,7 +119,7 @@ func validateListen(listenStr string) ([]gopostgrespubsub.EventType, error) {
 
 func (wm *WsManager) pingAndRemoveConnections() {
 	connToBeClosed := make(map[net.Conn]interface{}) // Set (abstract data type)
-	activeConnMap := make(map[gopostgrespubsub.EventType][]net.Conn)
+	activeConnMap := make(map[internal.EventType][]net.Conn)
 
 	for eventType := range wm.EventTypeConns {
 		for i, conn := range wm.EventTypeConns[eventType] {
