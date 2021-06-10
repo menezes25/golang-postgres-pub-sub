@@ -8,16 +8,15 @@ const (
 	EVENT EventType = "event"
 )
 
+//TODO: avaliar se devemos remover EventType e troca-lo por string
+//* isso porque agora os tópicos são todos injetados, e não serão do tipo EventType mais
+//TODO: Topic
 type Event struct {
 	Type    EventType   `json:"type,omitempty"`
 	Payload interface{} `json:"payload,omitempty"`
 }
 
-type Notification struct {
-	Channel string `json:"channel,omitempty"`
-	Payload string `json:"payload,omitempty"`
-}
-
+//TODO: remover
 func (et EventType) Type() string {
 	return string(et)
 }

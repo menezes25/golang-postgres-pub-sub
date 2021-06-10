@@ -64,11 +64,14 @@ func NewPostgresPubSub(ctx context.Context, config PostgresPubSubConfig) (Postgr
 	}
 
 	eventChannels := make([]<-chan internal.Event, 0)
+	//TODO: esse for passa a iterar um array de interfaces do tipo EventHandler
 	for _, tableName := range config.PubSubTableNames {
 		topicName := tableName
+		//TODO: o Subscribe se mantém aqui, porém no parâmetro de entrada chama EventHandler.Name()
 		dataChan := postgresEventBus.Subscribe(topicName)
 		// FIXME: O Handle deve ser injetado
-		eventChan := internal.HandleData(ctx, dataChan, l, topicName, HandlePostgresDataBoleto)
+		//TODO: o EventHandler é injetado ao invés do topicName e do HandlePostgresDataBoleto
+		eventChan := HandleData(ctx, dataChan, l, topicName, HandlePostgresDataBoleto)
 		eventChannels = append(eventChannels, eventChan)
 	}
 
