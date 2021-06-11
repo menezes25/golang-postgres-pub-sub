@@ -2,10 +2,11 @@ package gopostgrespubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/menezes25/golang-postgres-pub-sub/internal"
+	"github.com/menezes25/golang-postgres-pub-sub/eventbus"
 	"github.com/menezes25/golang-postgres-pub-sub/postgres"
 	transporthttp "github.com/menezes25/golang-postgres-pub-sub/transport/http"
 	"go.uber.org/zap"
@@ -16,13 +17,22 @@ type PostgresPubSub interface {
 }
 
 type PostgresPubSubConfig struct {
-	DbHost           string
-	DbName           string
-	DbUser           string
-	DbPort           string
-	DbPass           string
-	ServerAddr       string
-	PubSubTableNames []string // Os nomes das tableas são também os nomes dos topicos
+	DbHost        string
+	DbName        string
+	DbUser        string
+	DbPort        string
+	DbPass        string
+	ServerAddr    string
+	EventHandlers []EventHandler
+}
+
+// EventHandler é uma interface que deve ser atendida para acessar os triggers
+type EventHandler interface {
+	Name() string // O nome retornado é o nome da tabela que é também o nome do topico
+	HandleInsert(interface{}) (interface{}, error)
+	HandleUpdate(interface{}) (interface{}, error)
+	HandleDelete(interface{}) (interface{}, error)
+	HandlerUnknownOperation(interface{}) (interface{}, error)
 }
 
 type postgresPubSub struct {
@@ -30,7 +40,6 @@ type postgresPubSub struct {
 	logger *zap.Logger
 }
 
-// type satisfies an interface
 var _ PostgresPubSub = (*postgresPubSub)(nil)
 
 func NewPostgresPubSub(ctx context.Context, config PostgresPubSubConfig) (PostgresPubSub, error) {
@@ -43,19 +52,16 @@ func NewPostgresPubSub(ctx context.Context, config PostgresPubSubConfig) (Postgr
 	}
 	l := zapLogger.Sugar()
 
-	// ctx, cancel := context.WithCancel(context.Background())
-	// ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	// defer cancel()
-
 	postgresCli, err := postgres.NewProduction(config.DbHost, config.DbName, config.DbUser, config.DbPort, config.DbPass, l)
 	if err != nil {
 		return nil, err
 	}
 
-	// const topicEvent = "event"
-	// const topicBoleto = "boleto"
-	// postgresEventBus := gopostgrespubsub.NewEventBus([]string{topicEvent, topicBoleto})
-	postgresEventBus := internal.NewEventBus(config.PubSubTableNames)
+	pubSubTableNames := make([]string, 0)
+	for _, evHandler := range config.EventHandlers {
+		pubSubTableNames = append(pubSubTableNames, evHandler.Name())
+	}
+	postgresEventBus := eventbus.NewEventBus(pubSubTableNames)
 	postgresCli.WithEventBus(postgresEventBus)
 
 	err = postgresCli.StartListeningToNotifications(ctx)
@@ -63,19 +69,15 @@ func NewPostgresPubSub(ctx context.Context, config PostgresPubSubConfig) (Postgr
 		return nil, err
 	}
 
-	eventChannels := make([]<-chan internal.Event, 0)
-	//TODO: esse for passa a iterar um array de interfaces do tipo EventHandler
-	for _, tableName := range config.PubSubTableNames {
-		topicName := tableName
-		//TODO: o Subscribe se mantém aqui, porém no parâmetro de entrada chama EventHandler.Name()
+	eventChannels := make([]<-chan eventbus.Event, 0)
+	for _, evHandler := range config.EventHandlers {
+		topicName := evHandler.Name()
 		dataChan := postgresEventBus.Subscribe(topicName)
-		// FIXME: O Handle deve ser injetado
-		//TODO: o EventHandler é injetado ao invés do topicName e do HandlePostgresDataBoleto
-		eventChan := HandleData(ctx, dataChan, l, topicName, HandlePostgresDataBoleto)
+		eventChan := HandleEvent(ctx, dataChan, l, evHandler)
 		eventChannels = append(eventChannels, eventChan)
 	}
 
-	fanInEvent := internal.Merge(eventChannels...)
+	fanInEvent := eventbus.Merge(eventChannels...)
 
 	transHttpRouter, err := transporthttp.NewTransportHttp(ctx, postgresCli, fanInEvent)
 	if err != nil {
@@ -118,4 +120,50 @@ func (ps *postgresPubSub) StartServer(ctx context.Context) <-chan error {
 		}
 	}()
 	return errChanServer
+}
+
+// DefaultEventHandler implementa gopostgrespubsub.EventHandler
+// e por padrão é o handler do topico `event`.
+//
+// Como usar:
+// Use a Composição em Golang e
+// sobreescreva o metodo Name() padrão pelo seu metodo Name().
+//
+// type MyEventHandler struct {
+// 	gopostgrespubsub.DefaultEventHandler // composition
+// }
+//
+// func (myEventHandler *MyEventHandler) Name() string {
+// 	return "anothertopic"
+// }
+//
+// check if the type satisfies the interface `gopostgrespubsub.EventHandler`
+// var _ gopostgrespubsub.EventHandler = (*MyEventHandler)(nil)
+//
+type DefaultEventHandler struct{}
+
+var _ EventHandler = (*DefaultEventHandler)(nil)
+
+func (b *DefaultEventHandler) Name() string {
+	return "event"
+}
+
+func (b *DefaultEventHandler) HandleInsert(payload interface{}) (interface{}, error) {
+	fmt.Printf("[WARN] DefaultEventHandler INSERT | payload: %v | returning not implemented.\n", payload)
+	return nil, errors.New("not implemented")
+}
+
+func (b *DefaultEventHandler) HandleUpdate(payload interface{}) (interface{}, error) {
+	fmt.Printf("[WARN] DefaultEventHandler UPDATE | payload: %v | returning not implemented.\n", payload)
+	return nil, errors.New("not implemented")
+}
+
+func (b *DefaultEventHandler) HandleDelete(payload interface{}) (interface{}, error) {
+	fmt.Printf("[WARN] DefaultEventHandler DELETE | payload: %v | returning not implemented.\n", payload)
+	return nil, errors.New("not implemented")
+}
+
+func (b *DefaultEventHandler) HandlerUnknownOperation(payload interface{}) (interface{}, error) {
+	fmt.Printf("[WARN] DefaultEventHandler UNKNOWN OPERATION | payload: %v | returning not implemented.\n", payload)
+	return nil, errors.New("not implemented")
 }
