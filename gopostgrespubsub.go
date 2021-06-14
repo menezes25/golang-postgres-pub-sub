@@ -29,10 +29,14 @@ type PostgresPubSubConfig struct {
 // EventHandler é uma interface que deve ser atendida para acessar os triggers
 type EventHandler interface {
 	Name() string // O nome retornado é o nome da tabela que é também o nome do topico
-	HandleInsert(interface{}) (interface{}, error)
-	HandleUpdate(interface{}) (interface{}, error)
-	HandleDelete(interface{}) (interface{}, error)
-	HandlerUnknownOperation(interface{}) (interface{}, error)
+	// HandleInsert recebe uma string json do tipo chave=coluna_tabela e valor=valor_coluna_tabela
+	HandleInsert(string) (interface{}, error)
+	// HandleUpdate recebe uma string json do tipo chave=coluna_tabela e valor=valor_coluna_tabela
+	HandleUpdate(string) (interface{}, error)
+	// HandleDelete recebe uma string json do tipo chave=coluna_tabela e valor=valor_coluna_tabela
+	HandleDelete(string) (interface{}, error)
+	// HandlerUnknownOperation recebe uma string json do tipo chave=coluna_tabela e valor=valor_coluna_tabela
+	HandlerUnknownOperation(string) (interface{}, error)
 }
 
 type postgresPubSub struct {
@@ -148,22 +152,22 @@ func (b *DefaultEventHandler) Name() string {
 	return "event"
 }
 
-func (b *DefaultEventHandler) HandleInsert(payload interface{}) (interface{}, error) {
+func (b *DefaultEventHandler) HandleInsert(payload string) (interface{}, error) {
 	fmt.Printf("[WARN] DefaultEventHandler INSERT | payload: %v | returning not implemented.\n", payload)
 	return nil, errors.New("not implemented")
 }
 
-func (b *DefaultEventHandler) HandleUpdate(payload interface{}) (interface{}, error) {
+func (b *DefaultEventHandler) HandleUpdate(payload string) (interface{}, error) {
 	fmt.Printf("[WARN] DefaultEventHandler UPDATE | payload: %v | returning not implemented.\n", payload)
 	return nil, errors.New("not implemented")
 }
 
-func (b *DefaultEventHandler) HandleDelete(payload interface{}) (interface{}, error) {
+func (b *DefaultEventHandler) HandleDelete(payload string) (interface{}, error) {
 	fmt.Printf("[WARN] DefaultEventHandler DELETE | payload: %v | returning not implemented.\n", payload)
 	return nil, errors.New("not implemented")
 }
 
-func (b *DefaultEventHandler) HandlerUnknownOperation(payload interface{}) (interface{}, error) {
+func (b *DefaultEventHandler) HandlerUnknownOperation(payload string) (interface{}, error) {
 	fmt.Printf("[WARN] DefaultEventHandler UNKNOWN OPERATION | payload: %v | returning not implemented.\n", payload)
 	return nil, errors.New("not implemented")
 }

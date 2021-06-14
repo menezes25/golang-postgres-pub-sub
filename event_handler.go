@@ -31,29 +31,37 @@ func HandleEvent(ctx context.Context, eventDataChan chan eventbus.DataEvent, l *
 
 				l.Infow("new data event", "topic", data.Topic, "payload", data.Data)
 				type EventData struct {
-					Op string `json:"op,omitempty"`
-					// TODO: Verificar se essa é a melhor estrutura para payload, pois o unmarshal do payload é de responsabilidade do usuário da lib
-					Payload interface{} `json:"payload,omitempty"`
+					Op      string                 `json:"op,omitempty"`
+					Payload map[string]interface{} `json:"payload,omitempty"`
 				}
 
 				var event EventData
 				payload := data.Data.(string)
 				err := json.Unmarshal([]byte(payload), &event)
 				if err != nil {
+					l.Errorf("EventData Unmarshal %s", err)
 					ch <- eventbus.Event{Payload: err.Error(), Type: eventbus.EventType(data.Topic)}
+					continue
+				}
+
+				payloadByteArr, err := json.Marshal(event.Payload)
+				if err != nil {
+					l.Errorf("Payload Marshal %s", err)
+					ch <- eventbus.Event{Payload: err.Error(), Type: eventbus.EventType(data.Topic)}
+					continue
 				}
 
 				var handleRes interface{}
 				var handleErr error
 				switch event.Op {
 				case PG_INSERT_OP:
-					handleRes, handleErr = evHandler.HandleInsert(event.Payload)
+					handleRes, handleErr = evHandler.HandleInsert(string(payloadByteArr))
 				case PG_UPDATE_OP:
-					handleRes, handleErr = evHandler.HandleUpdate(event.Payload)
+					handleRes, handleErr = evHandler.HandleUpdate(string(payloadByteArr))
 				case PG_DELETE_OP:
-					handleRes, handleErr = evHandler.HandleDelete(event.Payload)
+					handleRes, handleErr = evHandler.HandleDelete(string(payloadByteArr))
 				default:
-					handleRes, handleErr = evHandler.HandlerUnknownOperation(event.Payload)
+					handleRes, handleErr = evHandler.HandlerUnknownOperation(string(payloadByteArr))
 				}
 
 				// Caso handleErr && handleRes forem nulos, não escreve nada no canal
