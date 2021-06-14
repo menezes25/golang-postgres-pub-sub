@@ -15,8 +15,8 @@ const (
 	PG_DELETE_OP = "DELETE"
 )
 
-func HandleEvent(ctx context.Context, eventDataChan chan eventbus.DataEvent, l *zap.SugaredLogger, evHandler EventHandler) <-chan eventbus.Event {
-	ch := make(chan eventbus.Event, 1)
+func HandleEvent(ctx context.Context, eventDataChan chan eventbus.DataEvent, l *zap.SugaredLogger, evHandler EventHandler) <-chan eventbus.Topic {
+	ch := make(chan eventbus.Topic, 1)
 
 	go func() {
 		dataTopic := evHandler.Name()
@@ -40,14 +40,14 @@ func HandleEvent(ctx context.Context, eventDataChan chan eventbus.DataEvent, l *
 				err := json.Unmarshal([]byte(payload), &event)
 				if err != nil {
 					l.Errorf("EventData Unmarshal %s", err)
-					ch <- eventbus.Event{Payload: err.Error(), Type: eventbus.EventType(data.Topic)}
+					ch <- eventbus.Topic{Payload: err.Error(), Type: data.Topic}
 					continue
 				}
 
 				payloadByteArr, err := json.Marshal(event.Payload)
 				if err != nil {
 					l.Errorf("Payload Marshal %s", err)
-					ch <- eventbus.Event{Payload: err.Error(), Type: eventbus.EventType(data.Topic)}
+					ch <- eventbus.Topic{Payload: err.Error(), Type: data.Topic}
 					continue
 				}
 
@@ -67,12 +67,12 @@ func HandleEvent(ctx context.Context, eventDataChan chan eventbus.DataEvent, l *
 				// Caso handleErr && handleRes forem nulos, não escreve nada no canal
 
 				if handleErr != nil {
-					ch <- eventbus.Event{Payload: handleErr.Error(), Type: eventbus.EventType(data.Topic)}
+					ch <- eventbus.Topic{Payload: handleErr.Error(), Type: data.Topic}
 					continue
 				}
 
 				if handleRes != nil {
-					ch <- eventbus.Event{Payload: handleRes, Type: eventbus.EventType(data.Topic)}
+					ch <- eventbus.Topic{Payload: handleRes, Type: data.Topic}
 					continue
 				}
 

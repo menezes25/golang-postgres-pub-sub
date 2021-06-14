@@ -22,7 +22,7 @@ type TransportHttp struct {
 // zero-memory way to represent a pointer to struct.
 var _ http.Handler = (*TransportHttp)(nil)
 
-func NewTransportHttp(ctx context.Context, postgresCli *postgres.PostgresClient, fanInEvent <-chan eventbus.Event) (*TransportHttp, error) {
+func NewTransportHttp(ctx context.Context, postgresCli *postgres.PostgresClient, fanInEvent <-chan eventbus.Topic) (*TransportHttp, error) {
 	wsManager := websocket.New(ctx, fanInEvent)
 	tr := TransportHttp{
 		router:      httprouter.New(),

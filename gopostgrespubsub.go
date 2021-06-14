@@ -73,7 +73,7 @@ func NewPostgresPubSub(ctx context.Context, config PostgresPubSubConfig) (Postgr
 		return nil, err
 	}
 
-	eventChannels := make([]<-chan eventbus.Event, 0)
+	eventChannels := make([]<-chan eventbus.Topic, 0)
 	for _, evHandler := range config.EventHandlers {
 		topicName := evHandler.Name()
 		dataChan := postgresEventBus.Subscribe(topicName)

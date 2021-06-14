@@ -24,12 +24,12 @@ type GenericContract struct {
 }
 
 type WsManager struct {
-	EventTypeConns map[eventbus.EventType][]net.Conn
+	EventTypeConns map[string][]net.Conn
 }
 
-func New(ctx context.Context, eventChan <-chan eventbus.Event) *WsManager {
+func New(ctx context.Context, eventChan <-chan eventbus.Topic) *WsManager {
 	wm := &WsManager{
-		EventTypeConns: make(map[eventbus.EventType][]net.Conn),
+		EventTypeConns: make(map[string][]net.Conn),
 	}
 
 	go func() {
@@ -40,7 +40,7 @@ func New(ctx context.Context, eventChan <-chan eventbus.Event) *WsManager {
 
 				for i, c := range wm.EventTypeConns[event.Type] {
 					contract := GenericContract{
-						Type:    event.Type.Type(),
+						Type:    event.Type,
 						Payload: event.Payload,
 					}
 
@@ -103,15 +103,15 @@ func (wm *WsManager) MakeListenToEventsHandler() httprouter.Handle {
 	}
 }
 
-func validateListen(listenStr string) ([]eventbus.EventType, error) {
+func validateListen(listenStr string) ([]string, error) {
 	if listenStr == "" {
 		return nil, errors.New("a requisição deve informar no minimo um listen")
 	}
 
 	listens := strings.Split(listenStr, ",")
-	evetntTypeList := make([]eventbus.EventType, 0)
+	evetntTypeList := make([]string, 0)
 	for _, listen := range listens {
-		evetntTypeList = append(evetntTypeList, eventbus.EventType(listen))
+		evetntTypeList = append(evetntTypeList, listen)
 	}
 
 	return evetntTypeList, nil
@@ -119,7 +119,7 @@ func validateListen(listenStr string) ([]eventbus.EventType, error) {
 
 func (wm *WsManager) pingAndRemoveConnections() {
 	connToBeClosed := make(map[net.Conn]interface{}) // Set (abstract data type)
-	activeConnMap := make(map[eventbus.EventType][]net.Conn)
+	activeConnMap := make(map[string][]net.Conn)
 
 	for eventType := range wm.EventTypeConns {
 		for i, conn := range wm.EventTypeConns[eventType] {
