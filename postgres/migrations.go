@@ -33,8 +33,6 @@ func (pc *PostgresClient) createTable(ctx context.Context, qry string) error {
 }
 
 func (pc *PostgresClient) createTriggerAndTriggerFuncs(ctx context.Context, tables []string) error {
-	//TODO: parametriar nome dos canais
-
 	for _, table := range tables {
 		tableName := strings.TrimSpace(strings.ToLower(table))
 		vars := map[string]string{

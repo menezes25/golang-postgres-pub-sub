@@ -56,15 +56,16 @@ func NewPostgresPubSub(ctx context.Context, config PostgresPubSubConfig) (Postgr
 	}
 	l := zapLogger.Sugar()
 
-	postgresCli, err := postgres.NewProduction(config.DbHost, config.DbName, config.DbUser, config.DbPort, config.DbPass, l)
-	if err != nil {
-		return nil, err
-	}
-
 	pubSubTableNames := make([]string, 0)
 	for _, evHandler := range config.EventHandlers {
 		pubSubTableNames = append(pubSubTableNames, evHandler.Name())
 	}
+
+	postgresCli, err := postgres.NewProduction(pubSubTableNames, config.DbHost, config.DbName, config.DbUser, config.DbPort, config.DbPass, l)
+	if err != nil {
+		return nil, err
+	}
+
 	postgresEventBus := eventbus.NewEventBus(pubSubTableNames)
 	postgresCli.WithEventBus(postgresEventBus)
 

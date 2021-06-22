@@ -27,9 +27,9 @@ type PostgresClient struct {
 }
 
 // NewProduction se conecta ao banco de dados tenta criar o banco e suas tabelas e retorna um cliente
-func NewProduction(host, dbname, user, port, password string, logger *zap.SugaredLogger) (*PostgresClient, error) {
+func NewProduction(tables []string, host, dbname, user, port, password string, logger *zap.SugaredLogger) (*PostgresClient, error) {
 	//* cliente conectado ao banco de dados padrão para criação do banco de dados
-	cli, err := newPostgresClient(host, "postgres", user, port, password, logger)
+	cli, err := newPostgresClient(tables, host, "postgres", user, port, password, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -55,12 +55,12 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 	// }
 	cli.Close()
 
-	cli, err = newPostgresClient(host, dbname, user, port, password, logger)
+	cli, err = newPostgresClient(tables, host, dbname, user, port, password, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	err = cli.migrateTables(ctx)
+	err = cli.migrateTables(ctx, tables)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func NewProduction(host, dbname, user, port, password string, logger *zap.Sugare
 }
 
 // newPostgresClient cria um cliente capaz de se comunicar com o banco de dados
-func newPostgresClient(host, dbname, user, port, password string, logger *zap.SugaredLogger) (*PostgresClient, error) {
+func newPostgresClient(tables []string, host, dbname, user, port, password string, logger *zap.SugaredLogger) (*PostgresClient, error) {
 	dns := fmt.Sprintf("host=%s dbname=%s user=%s port=%s password=%s sslmode=disable application_name=pub-sub-go",
 		host,
 		dbname,
@@ -115,7 +115,9 @@ func (pc *PostgresClient) WithEventBus(eventBus *eventbus.EventBus) {
 	pc.eventBus = eventBus
 }
 
-func (pc *PostgresClient) migrateTables(ctx context.Context) error {
+// TODO: Verificar se devemos renomear esse metodo
+func (pc *PostgresClient) migrateTables(ctx context.Context, tables []string) error {
+	// TODO: Como LIB não se cria database
 	// err := pc.createTable(ctx, createEventTable)
 	// if err != nil {
 	// 	return err
@@ -127,7 +129,7 @@ func (pc *PostgresClient) migrateTables(ctx context.Context) error {
 	// }
 
 	// err := pc.createTriggerAndTriggerFuncs(ctx, []string{"event", "boleto"})
-	err := pc.createTriggerAndTriggerFuncs(ctx, []string{"boleto"})
+	err := pc.createTriggerAndTriggerFuncs(ctx, tables)
 	if err != nil {
 		return err
 	}
